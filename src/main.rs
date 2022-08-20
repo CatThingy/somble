@@ -9,6 +9,8 @@ use utils::MousePosition;
 static PLAYER_COLLISION_GROUP: u32 = 1 << 0;
 static ENEMY_COLLISION_GROUP: u32 = 1 << 1;
 static WALL_COLLISION_GROUP: u32 = 1 << 2;
+static PLAYER_ATTACK_COLLISION_GROUP: u32 = 1 << 3;
+static ENEMY_ATTACK_COLLISION_GROUP: u32 = 1 << 4;
 
 #[derive(Component)]
 pub struct MainCamera;
@@ -44,9 +46,12 @@ fn debug_spawn(
     keys: Res<Input<KeyCode>>,
     asset_server: Res<AssetServer>,
     mouse: Res<MousePosition>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
-        let texture: Handle<Image> = asset_server.load("elemental.png");
+        let texture_handle = asset_server.load("elemental.png");
+        let atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 32.0), 3, 1);
+        let texture_atlas = texture_atlases.add(atlas);
         cmd.spawn_bundle((
             Enemy,
             RigidBody::Dynamic,
@@ -54,18 +59,22 @@ fn debug_spawn(
             Collider::ball(16.0),
             CollisionGroups {
                 memberships: ENEMY_COLLISION_GROUP,
-                filters: PLAYER_COLLISION_GROUP | ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                filters: PLAYER_COLLISION_GROUP | ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | PLAYER_ATTACK_COLLISION_GROUP,
             },
             LockedAxes::ROTATION_LOCKED,
-            Damping { linear_damping: 60.0, angular_damping: 0.0 }
+            Damping {
+                linear_damping: 60.0,
+                angular_damping: 0.0,
+            },
         ))
-        .insert_bundle(SpriteBundle {
-            sprite: Sprite {
+        .insert_bundle(SpriteSheetBundle {
+            sprite: TextureAtlasSprite {
                 custom_size: Some(Vec2::from_array([32.0, 64.0])),
                 anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
+                index: 0,
                 ..default()
             },
-            texture,
+            texture_atlas,
             transform: Transform {
                 translation: **mouse,
                 ..default()

@@ -2,11 +2,11 @@ use bevy::{prelude::*, sprite::Anchor};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    utils::MousePosition, ENEMY_COLLISION_GROUP, PLAYER_COLLISION_GROUP, WALL_COLLISION_GROUP,
+    utils::MousePosition, ENEMY_COLLISION_GROUP, PLAYER_COLLISION_GROUP, WALL_COLLISION_GROUP, ENEMY_ATTACK_COLLISION_GROUP,
 };
 
-pub const SPEED: f32 = 300.0;
-pub const PLAYER_KICK_RANGE: f32 = 48.0;
+pub const SPEED: f32 = 200.0;
+pub const PLAYER_KICK_RANGE: f32 = 20.0;
 
 const IDLE_ANIM_OFFSET: usize = 0;
 const WALK_ANIM_OFFSET: usize = 4;
@@ -34,7 +34,7 @@ pub struct PlayerBundle {
     #[bundle]
     spritesheet: SpriteSheetBundle,
     collision_group: CollisionGroups,
-    locked: LockedAxes
+    locked: LockedAxes,
 }
 
 pub struct Plugin;
@@ -188,6 +188,7 @@ impl Plugin {
     }
 
     fn attack(
+        mut cmd: Commands,
         rapier_ctx: Res<RapierContext>,
         mouse_pos: Res<MousePosition>,
         q_player: Query<&Transform, With<Player>>,
@@ -198,13 +199,29 @@ impl Plugin {
             let cast_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
             let filter = QueryFilter::new().groups(InteractionGroups {
                 memberships: PLAYER_COLLISION_GROUP,
-                filter: ENEMY_COLLISION_GROUP,
+                filter: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ENEMY_ATTACK_COLLISION_GROUP,
             });
             if let Some((entity, _)) =
                 rapier_ctx.cast_ray(pos, cast_dir, PLAYER_KICK_RANGE, true, filter)
             {
                 info!("hit {entity:?}!");
+                //TODO: do something instead of instakill
+                cmd.entity(entity).despawn_recursive();
             }
+        }
+    }
+
+    fn init_throw(
+        mut cmd: Commands,
+        mouse_pos: Res<MousePosition>,
+        mouse_buttons: Res<Input<MouseButton>>,
+        q_player: Query<&Transform, With<Player>>,
+    ) {
+        if mouse_buttons.just_pressed(MouseButton::Right) {
+            let pos = q_player.single().translation.truncate();
+            let throw_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
+            info!("AAAH I'VE BEEN THROWN IN THE DIRECTION {throw_dir}");
+            // cmd.spawn_bundle()
         }
     }
 }
@@ -215,6 +232,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::movement)
             .add_system(Self::animate)
             .add_system(Self::attack)
+            .add_system(Self::init_throw)
             .init_resource::<InputDirection>()
             .init_resource::<PlayerDirection>();
     }

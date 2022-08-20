@@ -15,12 +15,8 @@ fn main() {
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::default())
+        .add_plugin(player::Plugin)
         .add_startup_system(init)
-        .add_startup_system(player::init)
-        .add_system(player::movement)
-        .add_system(player::update_player_animation)
-        .init_resource::<player::InputDirection>()
-        .init_resource::<player::PlayerDirection>()
         .run();
 }
 

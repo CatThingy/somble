@@ -1,8 +1,9 @@
 use bevy::{prelude::*, sprite::Anchor};
+use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::utils::{MousePosition, Spritesheets};
+use crate::utils::MousePosition;
 use crate::{consts::*, GameState};
 
 #[derive(Component)]
@@ -30,12 +31,19 @@ pub struct PlayerBundle {
     locked: LockedAxes,
 }
 
-pub struct Plugin;
-
-impl Plugin {
-    fn init(mut cmd: Commands, spritesheets: Res<Spritesheets>) {
-        let texture_atlas = spritesheets.get("Player").unwrap().clone_weak();
-        cmd.spawn_bundle(PlayerBundle {
+impl LdtkEntity for PlayerBundle {
+    fn bundle_entity(
+        _: &EntityInstance,
+        _: &LayerInstance,
+        _: Option<&Handle<Image>>,
+        _: Option<&TilesetDefinition>,
+        asset_server: &AssetServer,
+        texture_atlases: &mut Assets<TextureAtlas>,
+    ) -> Self {
+        let player_texture = asset_server.load("player.png");
+        let player_atlas = TextureAtlas::from_grid(player_texture, Vec2::new(16.0, 32.0), 12, 1);
+        let texture_atlas = texture_atlases.add(player_atlas);
+        PlayerBundle {
             player: Player,
             rigidbody: RigidBody::Dynamic,
             velocity: Velocity::default(),
@@ -48,6 +56,10 @@ impl Plugin {
                     ..default()
                 },
                 texture_atlas,
+                transform: Transform {
+                    translation: Vec3::Z,
+                    ..default()
+                },
                 ..default()
             },
             collision_group: CollisionGroups {
@@ -55,16 +67,23 @@ impl Plugin {
                 filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP,
             },
             locked: LockedAxes::ROTATION_LOCKED,
-        });
+        }
     }
+}
 
+pub struct Plugin;
+
+impl Plugin {
     fn movement(
         mut q_player: Query<&mut Velocity, With<Player>>,
         keys: Res<Input<KeyCode>>,
         mut input_direction: ResMut<InputDirection>,
         mut player_direction: ResMut<PlayerDirection>,
     ) {
-        let mut player_vel = q_player.single_mut();
+        let mut player_vel = match q_player.get_single_mut() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
 
         // Prevent stopping on SOCD
         if keys.just_pressed(KeyCode::A) {
@@ -122,7 +141,10 @@ impl Plugin {
         player_direction: Res<PlayerDirection>,
         input_direction: Res<InputDirection>,
     ) {
-        let (mut timer, mut sprite) = q_player.single_mut();
+        let (mut timer, mut sprite) = match q_player.get_single_mut() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
 
         if input_direction.is_changed() {
             if **input_direction != Vec2::ZERO {
@@ -193,8 +215,13 @@ impl Plugin {
         q_player: Query<&Transform, With<Player>>,
         mouse_buttons: Res<Input<MouseButton>>,
     ) {
+        let player = match q_player.get_single() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+
         if mouse_buttons.just_pressed(MouseButton::Left) {
-            let pos = q_player.single().translation.truncate();
+            let pos = player.translation.truncate();
             let cast_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
             let filter = QueryFilter::new().groups(InteractionGroups {
                 memberships: PLAYER_ATTACK_COLLISION_GROUP,
@@ -216,8 +243,12 @@ impl Plugin {
         mouse_buttons: Res<Input<MouseButton>>,
         q_player: Query<&Transform, With<Player>>,
     ) {
+        let player = match q_player.get_single() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
         if mouse_buttons.just_pressed(MouseButton::Right) {
-            let pos = q_player.single().translation.truncate();
+            let pos = player.translation.truncate();
             let throw_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
             info!("AAAH I'VE BEEN THROWN IN THE DIRECTION {throw_dir}");
             // cmd.spawn_bundle()
@@ -227,12 +258,12 @@ impl Plugin {
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_enter_system(GameState::InGame, Self::init)
-            .add_system(Self::movement.run_in_state(GameState::InGame))
+        app.add_system(Self::movement.run_in_state(GameState::InGame))
             .add_system(Self::animate.run_in_state(GameState::InGame))
             .add_system(Self::attack.run_in_state(GameState::InGame))
             .add_system(Self::init_throw.run_in_state(GameState::InGame))
             .init_resource::<InputDirection>()
-            .init_resource::<PlayerDirection>();
+            .init_resource::<PlayerDirection>()
+            .register_ldtk_entity::<PlayerBundle>("Player");
     }
 }

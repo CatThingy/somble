@@ -1,9 +1,13 @@
-use bevy::{prelude::*, render::camera::RenderTarget};
+use bevy::{prelude::*, render::camera::RenderTarget, utils::HashMap};
+use iyes_loopless::prelude::*;
 
-use crate::MainCamera;
+use crate::{GameState, MainCamera};
 
 #[derive(Default, Deref, DerefMut)]
 pub struct MousePosition(pub Vec3);
+
+#[derive(Default, Deref, DerefMut)]
+pub struct Spritesheets(pub HashMap<String, Handle<TextureAtlas>>);
 
 pub struct Plugin;
 
@@ -30,11 +34,35 @@ impl Plugin {
             }
         }
     }
+
+    fn load_assets(
+        asset_server: Res<AssetServer>,
+        mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+        mut spritesheets: ResMut<Spritesheets>,
+        mut cmd: Commands,
+    ) {
+        let elemental_texture = asset_server.load("elemental.png");
+        let elemental_atlas =
+            TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 3, 1);
+        let elemental_handle = texture_atlases.add(elemental_atlas);
+
+        spritesheets.insert("Elemental".to_string(), elemental_handle);
+
+        let player_texture = asset_server.load("player.png");
+        let player_atlas = TextureAtlas::from_grid(player_texture, Vec2::new(16.0, 32.0), 12, 1);
+        let player_handle = texture_atlases.add(player_atlas);
+
+        spritesheets.insert("Player".to_string(), player_handle);
+
+        cmd.insert_resource(NextState(GameState::InGame))
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_system(Self::update_mouse_position)
-            .init_resource::<MousePosition>();
+            .add_startup_system(Self::load_assets)
+            .init_resource::<MousePosition>()
+            .init_resource::<Spritesheets>();
     }
 }

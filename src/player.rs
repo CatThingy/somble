@@ -1,8 +1,9 @@
 use bevy::{prelude::*, sprite::Anchor};
 use bevy_rapier2d::prelude::*;
+use iyes_loopless::prelude::*;
 
-use crate::consts::*;
-use crate::utils::MousePosition;
+use crate::utils::{MousePosition, Spritesheets};
+use crate::{consts::*, GameState};
 
 #[derive(Component)]
 pub struct Player;
@@ -32,14 +33,8 @@ pub struct PlayerBundle {
 pub struct Plugin;
 
 impl Plugin {
-    fn init(
-        mut cmd: Commands,
-        asset_server: Res<AssetServer>,
-        mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    ) {
-        let texture_handle = asset_server.load("player.png");
-        let atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 32.0), 12, 1);
-        let texture_atlas = texture_atlases.add(atlas);
+    fn init(mut cmd: Commands, spritesheets: Res<Spritesheets>) {
+        let texture_atlas = spritesheets.get("Player").unwrap().clone_weak();
         cmd.spawn_bundle(PlayerBundle {
             player: Player,
             rigidbody: RigidBody::KinematicVelocityBased,
@@ -216,7 +211,7 @@ impl Plugin {
     }
 
     fn init_throw(
-        mut cmd: Commands,
+        // mut cmd: Commands,
         mouse_pos: Res<MousePosition>,
         mouse_buttons: Res<Input<MouseButton>>,
         q_player: Query<&Transform, With<Player>>,
@@ -232,11 +227,11 @@ impl Plugin {
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(Self::init)
-            .add_system(Self::movement)
-            .add_system(Self::animate)
-            .add_system(Self::attack)
-            .add_system(Self::init_throw)
+        app.add_enter_system(GameState::InGame, Self::init)
+            .add_system(Self::movement.run_in_state(GameState::InGame))
+            .add_system(Self::animate.run_in_state(GameState::InGame))
+            .add_system(Self::attack.run_in_state(GameState::InGame))
+            .add_system(Self::init_throw.run_in_state(GameState::InGame))
             .init_resource::<InputDirection>()
             .init_resource::<PlayerDirection>();
     }

@@ -3,16 +3,26 @@ mod player;
 mod utils;
 
 use bevy::{prelude::*, render::texture::ImageSettings, sprite::Anchor};
+
 use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
-use utils::MousePosition;
+use iyes_loopless::prelude::*;
+
 use consts::*;
+use utils::{MousePosition, Spritesheets};
 
 #[derive(Component)]
 pub struct MainCamera;
 
 #[derive(Component)]
 pub struct Enemy;
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub enum GameState {
+    Loading,
+    // MainMenu,
+    InGame,
+}
 
 fn main() {
     App::new()
@@ -21,6 +31,7 @@ fn main() {
             ..default()
         })
         .insert_resource(ImageSettings::default_nearest())
+        .add_loopless_state(GameState::Loading)
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
         .add_plugin(RapierDebugRenderPlugin::default())
@@ -40,14 +51,11 @@ fn init(mut cmd: Commands) {
 fn debug_spawn(
     mut cmd: Commands,
     keys: Res<Input<KeyCode>>,
-    asset_server: Res<AssetServer>,
     mouse: Res<MousePosition>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    sheets: Res<Spritesheets>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
-        let texture_handle = asset_server.load("elemental.png");
-        let atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 32.0), 3, 1);
-        let texture_atlas = texture_atlases.add(atlas);
+        let texture_atlas = sheets.get("Elemental").unwrap().clone_weak();
         cmd.spawn_bundle((
             Enemy,
             RigidBody::Dynamic,

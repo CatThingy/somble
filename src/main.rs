@@ -44,6 +44,6 @@ fn main() {
 
 fn init(mut cmd: Commands) {
     let mut camera = Camera2dBundle::default();
-    camera.projection.scale = 0.5;
+    camera.projection.scale = 0.25;
     cmd.spawn_bundle(camera).insert(MainCamera);
 }

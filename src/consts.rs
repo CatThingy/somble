@@ -10,3 +10,7 @@ pub static PLAYER_KICK_RANGE: f32 = 20.0;
 pub static PLAYER_IDLE_ANIM_OFFSET: usize = 0;
 pub static PLAYER_WALK_ANIM_OFFSET: usize = 4;
 pub static PLAYER_WALK_ANIM_FRAMES: usize = 2;
+
+pub static CAMERA_PAN_SPEED: f32 = 20.0;
+pub static CAMERA_PAN_RANGE: f32 = 16.0;
+pub static CAMERA_PAN_SCALE: f32 = 0.0625;

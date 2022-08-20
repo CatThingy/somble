@@ -1,9 +1,11 @@
 mod consts;
 mod player;
 mod utils;
+mod level;
 
 use bevy::{prelude::*, render::texture::ImageSettings, sprite::Anchor};
 
+use bevy_ecs_ldtk::prelude::*;
 use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
@@ -14,7 +16,7 @@ use utils::{MousePosition, Spritesheets};
 #[derive(Component)]
 pub struct MainCamera;
 
-#[derive(Component)]
+#[derive(Default, Component)]
 pub struct Enemy;
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
@@ -36,7 +38,9 @@ fn main() {
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::default())
+        .add_plugin(LdtkPlugin)
         .add_plugin(utils::Plugin)
+        .add_plugin(level::Plugin)
         .add_plugin(player::Plugin)
         .add_startup_system(init)
         .add_system(debug_spawn)
@@ -44,7 +48,9 @@ fn main() {
 }
 
 fn init(mut cmd: Commands) {
-    cmd.spawn_bundle(Camera2dBundle::default())
+    let mut camera = Camera2dBundle::default();
+    camera.projection.scale = 0.5;
+    cmd.spawn_bundle(camera)
         .insert(MainCamera);
 }
 
@@ -60,7 +66,7 @@ fn debug_spawn(
             Enemy,
             RigidBody::Dynamic,
             Velocity::default(),
-            Collider::ball(16.0),
+            Collider::ball(8.0),
             CollisionGroups {
                 memberships: ENEMY_COLLISION_GROUP,
                 filters: PLAYER_COLLISION_GROUP
@@ -76,7 +82,7 @@ fn debug_spawn(
         ))
         .insert_bundle(SpriteSheetBundle {
             sprite: TextureAtlasSprite {
-                custom_size: Some(Vec2::from_array([32.0, 64.0])),
+                custom_size: Some(Vec2::from_array([16.0, 32.0])),
                 anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
                 index: 0,
                 ..default()

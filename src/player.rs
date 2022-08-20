@@ -37,13 +37,13 @@ impl Plugin {
         let texture_atlas = spritesheets.get("Player").unwrap().clone_weak();
         cmd.spawn_bundle(PlayerBundle {
             player: Player,
-            rigidbody: RigidBody::KinematicVelocityBased,
+            rigidbody: RigidBody::Dynamic,
             velocity: Velocity::default(),
-            collider: Collider::ball(16.0),
+            collider: Collider::ball(8.0),
             anim_timer: AnimationTimer(Timer::from_seconds(0.25, true)),
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
-                    custom_size: Some(Vec2::from_array([32.0, 64.0])),
+                    custom_size: Some(Vec2::from_array([16.0, 32.0])),
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
                     ..default()
                 },

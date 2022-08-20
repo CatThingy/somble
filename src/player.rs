@@ -1,16 +1,8 @@
 use bevy::{prelude::*, sprite::Anchor};
 use bevy_rapier2d::prelude::*;
 
-use crate::{
-    utils::MousePosition, ENEMY_COLLISION_GROUP, PLAYER_COLLISION_GROUP, WALL_COLLISION_GROUP, ENEMY_ATTACK_COLLISION_GROUP,
-};
-
-pub const SPEED: f32 = 200.0;
-pub const PLAYER_KICK_RANGE: f32 = 20.0;
-
-const IDLE_ANIM_OFFSET: usize = 0;
-const WALK_ANIM_OFFSET: usize = 4;
-const WALK_ANIM_FRAMES: usize = 2;
+use crate::consts::*;
+use crate::utils::MousePosition;
 
 #[derive(Component)]
 pub struct Player;
@@ -122,7 +114,7 @@ impl Plugin {
             }
         }
 
-        player_vel.linvel = input_direction.normalize_or_zero() * SPEED;
+        player_vel.linvel = input_direction.normalize_or_zero() * PLAYER_SPEED;
 
         if **input_direction != Vec2::ZERO {
             **player_direction = input_direction.as_ivec2();
@@ -140,18 +132,26 @@ impl Plugin {
         if input_direction.is_changed() {
             if **input_direction != Vec2::ZERO {
                 match **player_direction {
-                    IVec2 { x: _, y: 1 } => sprite.index = WALK_ANIM_OFFSET + WALK_ANIM_FRAMES * 0,
-                    IVec2 { x: 1, y: _ } => sprite.index = WALK_ANIM_OFFSET + WALK_ANIM_FRAMES * 1,
-                    IVec2 { x: -1, y: _ } => sprite.index = WALK_ANIM_OFFSET + WALK_ANIM_FRAMES * 2,
-                    IVec2 { x: _, y: -1 } => sprite.index = WALK_ANIM_OFFSET + WALK_ANIM_FRAMES * 3,
+                    IVec2 { x: _, y: 1 } => {
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 0
+                    }
+                    IVec2 { x: 1, y: _ } => {
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 1
+                    }
+                    IVec2 { x: -1, y: _ } => {
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 2
+                    }
+                    IVec2 { x: _, y: -1 } => {
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 3
+                    }
                     _ => (),
                 }
             } else {
                 match **player_direction {
-                    IVec2 { x: _, y: 1 } => sprite.index = IDLE_ANIM_OFFSET + 0,
-                    IVec2 { x: 1, y: _ } => sprite.index = IDLE_ANIM_OFFSET + 1,
-                    IVec2 { x: -1, y: _ } => sprite.index = IDLE_ANIM_OFFSET + 2,
-                    IVec2 { x: _, y: -1 } => sprite.index = IDLE_ANIM_OFFSET + 3,
+                    IVec2 { x: _, y: 1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 0,
+                    IVec2 { x: 1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 1,
+                    IVec2 { x: -1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 2,
+                    IVec2 { x: _, y: -1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 3,
                     _ => (),
                 }
             }
@@ -162,24 +162,28 @@ impl Plugin {
             if timer.just_finished() {
                 match **player_direction {
                     IVec2 { x: _, y: 1 } => {
-                        sprite.index = WALK_ANIM_OFFSET
-                            + WALK_ANIM_FRAMES * 0
-                            + ((sprite.index - WALK_ANIM_OFFSET + 1) % WALK_ANIM_FRAMES);
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET
+                            + PLAYER_WALK_ANIM_FRAMES * 0
+                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                % PLAYER_WALK_ANIM_FRAMES);
                     }
                     IVec2 { x: 1, y: _ } => {
-                        sprite.index = WALK_ANIM_OFFSET
-                            + WALK_ANIM_FRAMES * 1
-                            + ((sprite.index - WALK_ANIM_OFFSET + 1) % WALK_ANIM_FRAMES);
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET
+                            + PLAYER_WALK_ANIM_FRAMES * 1
+                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                % PLAYER_WALK_ANIM_FRAMES);
                     }
                     IVec2 { x: -1, y: _ } => {
-                        sprite.index = WALK_ANIM_OFFSET
-                            + WALK_ANIM_FRAMES * 2
-                            + ((sprite.index - WALK_ANIM_OFFSET + 1) % WALK_ANIM_FRAMES);
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET
+                            + PLAYER_WALK_ANIM_FRAMES * 2
+                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                % PLAYER_WALK_ANIM_FRAMES);
                     }
                     IVec2 { x: _, y: -1 } => {
-                        sprite.index = WALK_ANIM_OFFSET
-                            + WALK_ANIM_FRAMES * 3
-                            + ((sprite.index - WALK_ANIM_OFFSET + 1) % WALK_ANIM_FRAMES);
+                        sprite.index = PLAYER_WALK_ANIM_OFFSET
+                            + PLAYER_WALK_ANIM_FRAMES * 3
+                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                % PLAYER_WALK_ANIM_FRAMES);
                     }
                     _ => (),
                 }
@@ -198,7 +202,7 @@ impl Plugin {
             let pos = q_player.single().translation.truncate();
             let cast_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
             let filter = QueryFilter::new().groups(InteractionGroups {
-                memberships: PLAYER_COLLISION_GROUP,
+                memberships: PLAYER_ATTACK_COLLISION_GROUP,
                 filter: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ENEMY_ATTACK_COLLISION_GROUP,
             });
             if let Some((entity, _)) =

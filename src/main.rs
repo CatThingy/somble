@@ -1,3 +1,4 @@
+mod consts;
 mod player;
 mod utils;
 
@@ -5,12 +6,7 @@ use bevy::{prelude::*, render::texture::ImageSettings, sprite::Anchor};
 use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 use utils::MousePosition;
-
-static PLAYER_COLLISION_GROUP: u32 = 1 << 0;
-static ENEMY_COLLISION_GROUP: u32 = 1 << 1;
-static WALL_COLLISION_GROUP: u32 = 1 << 2;
-static PLAYER_ATTACK_COLLISION_GROUP: u32 = 1 << 3;
-static ENEMY_ATTACK_COLLISION_GROUP: u32 = 1 << 4;
+use consts::*;
 
 #[derive(Component)]
 pub struct MainCamera;
@@ -59,7 +55,10 @@ fn debug_spawn(
             Collider::ball(16.0),
             CollisionGroups {
                 memberships: ENEMY_COLLISION_GROUP,
-                filters: PLAYER_COLLISION_GROUP | ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | PLAYER_ATTACK_COLLISION_GROUP,
+                filters: PLAYER_COLLISION_GROUP
+                    | ENEMY_COLLISION_GROUP
+                    | WALL_COLLISION_GROUP
+                    | PLAYER_ATTACK_COLLISION_GROUP,
             },
             LockedAxes::ROTATION_LOCKED,
             Damping {

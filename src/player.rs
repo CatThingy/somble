@@ -1,7 +1,13 @@
 use bevy::{prelude::*, sprite::Anchor};
 use bevy_rapier2d::prelude::*;
 
+use crate::{
+    utils::MousePosition, ENEMY_COLLISION_GROUP, PLAYER_COLLISION_GROUP, WALL_COLLISION_GROUP,
+};
+
 pub const SPEED: f32 = 300.0;
+pub const PLAYER_KICK_RANGE: f32 = 48.0;
+
 const IDLE_ANIM_OFFSET: usize = 0;
 const WALK_ANIM_OFFSET: usize = 4;
 const WALK_ANIM_FRAMES: usize = 2;
@@ -18,6 +24,19 @@ pub struct InputDirection(Vec2);
 #[derive(Default, Deref, DerefMut)]
 pub struct PlayerDirection(IVec2);
 
+#[derive(Bundle)]
+pub struct PlayerBundle {
+    player: Player,
+    rigidbody: RigidBody,
+    velocity: Velocity,
+    collider: Collider,
+    anim_timer: AnimationTimer,
+    #[bundle]
+    spritesheet: SpriteSheetBundle,
+    collision_group: CollisionGroups,
+    locked: LockedAxes
+}
+
 pub struct Plugin;
 
 impl Plugin {
@@ -29,21 +48,26 @@ impl Plugin {
         let texture_handle = asset_server.load("player.png");
         let atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 32.0), 12, 1);
         let texture_atlas = texture_atlases.add(atlas);
-        cmd.spawn_bundle((
-            Player,
-            RigidBody::KinematicVelocityBased,
-            Velocity::default(),
-            Collider::ball(16.0),
-            AnimationTimer(Timer::from_seconds(0.25, true)),
-        ))
-        .insert_bundle(SpriteSheetBundle {
-            sprite: TextureAtlasSprite {
-                custom_size: Some(Vec2::from_array([32.0, 64.0])),
-                anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
+        cmd.spawn_bundle(PlayerBundle {
+            player: Player,
+            rigidbody: RigidBody::KinematicVelocityBased,
+            velocity: Velocity::default(),
+            collider: Collider::ball(16.0),
+            anim_timer: AnimationTimer(Timer::from_seconds(0.25, true)),
+            spritesheet: SpriteSheetBundle {
+                sprite: TextureAtlasSprite {
+                    custom_size: Some(Vec2::from_array([32.0, 64.0])),
+                    anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
+                    ..default()
+                },
+                texture_atlas,
                 ..default()
             },
-            texture_atlas,
-            ..default()
+            collision_group: CollisionGroups {
+                memberships: PLAYER_COLLISION_GROUP,
+                filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP,
+            },
+            locked: LockedAxes::ROTATION_LOCKED,
         });
     }
 
@@ -162,6 +186,27 @@ impl Plugin {
             }
         }
     }
+
+    fn attack(
+        rapier_ctx: Res<RapierContext>,
+        mouse_pos: Res<MousePosition>,
+        q_player: Query<&Transform, With<Player>>,
+        mouse_buttons: Res<Input<MouseButton>>,
+    ) {
+        if mouse_buttons.just_pressed(MouseButton::Left) {
+            let pos = q_player.single().translation.truncate();
+            let cast_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
+            let filter = QueryFilter::new().groups(InteractionGroups {
+                memberships: PLAYER_COLLISION_GROUP,
+                filter: ENEMY_COLLISION_GROUP,
+            });
+            if let Some((entity, _)) =
+                rapier_ctx.cast_ray(pos, cast_dir, PLAYER_KICK_RANGE, true, filter)
+            {
+                info!("hit {entity:?}!");
+            }
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
@@ -169,6 +214,7 @@ impl bevy::app::Plugin for Plugin {
         app.add_startup_system(Self::init)
             .add_system(Self::movement)
             .add_system(Self::animate)
+            .add_system(Self::attack)
             .init_resource::<InputDirection>()
             .init_resource::<PlayerDirection>();
     }

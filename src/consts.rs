@@ -5,7 +5,8 @@ pub static PLAYER_ATTACK_COLLISION_GROUP: u32 = 1 << 3;
 pub static ENEMY_ATTACK_COLLISION_GROUP: u32 = 1 << 4;
 
 pub static PLAYER_SPEED: f32 = 200.0;
-pub static PLAYER_KICK_RANGE: f32 = 20.0;
+pub static PLAYER_KICK_RANGE: f32 = 16.0;
+pub static PLAYER_KICK_FORCE: f32 = 100.0;
 
 pub static PLAYER_IDLE_ANIM_OFFSET: usize = 0;
 pub static PLAYER_WALK_ANIM_OFFSET: usize = 4;

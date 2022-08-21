@@ -99,14 +99,14 @@ impl LdtkEntity for ElementalBundle {
             },
             locked: LockedAxes::ROTATION_LOCKED,
             damping: Damping {
-                linear_damping: 60.0,
+                linear_damping: 20.0,
                 angular_damping: 0.0,
             },
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
-                    custom_size: Some(Vec2::from_array([16.0, 32.0])),
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
                     index: 0,
+                    color: Color::LIME_GREEN,
                     ..default()
                 },
                 texture_atlas,

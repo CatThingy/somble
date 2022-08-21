@@ -87,8 +87,8 @@ impl Plugin {
 
         let direction = focus_pos.translation - camera_pos.translation;
 
-        camera_pos.translation +=
-            direction.truncate().extend(0.0) * time.delta_seconds() * CAMERA_PAN_SPEED;
+        camera_pos.translation += direction.truncate().extend(0.0)
+            * (time.delta_seconds() * CAMERA_PAN_SPEED).clamp(0.0, 1.0);
     }
 
     fn update_focus_pos(
@@ -114,8 +114,9 @@ impl Plugin {
             *mouse_offset = offset * CAMERA_PAN_SCALE;
         }
 
-        focus_pos.translation =
-            (player_pos.translation.truncate() + mouse_offset.clamp_length_max(CAMERA_PAN_RANGE)).extend(0.0);
+        focus_pos.translation = (player_pos.translation.truncate()
+            + mouse_offset.clamp_length_max(CAMERA_PAN_RANGE))
+        .extend(0.0);
     }
 }
 

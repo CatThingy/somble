@@ -4,7 +4,7 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::utils::MousePosition;
-use crate::{consts::*, GameState};
+use crate::{consts::*, GameState, Enemy};
 
 #[derive(Component)]
 pub struct Player;
@@ -17,6 +17,11 @@ pub struct InputDirection(Vec2);
 
 #[derive(Default, Deref, DerefMut)]
 pub struct PlayerDirection(IVec2);
+
+struct Kicked {
+    target: Entity,
+    direction: Vec2
+}
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -208,12 +213,12 @@ impl Plugin {
         }
     }
 
-    fn attack(
-        mut cmd: Commands,
+    fn kick(
         rapier_ctx: Res<RapierContext>,
         mouse_pos: Res<MousePosition>,
         q_player: Query<&Transform, With<Player>>,
         mouse_buttons: Res<Input<MouseButton>>,
+        mut event_writer: EventWriter<Kicked>,
     ) {
         let player = match q_player.get_single() {
             Ok(v) => v,
@@ -230,9 +235,7 @@ impl Plugin {
             if let Some((entity, _)) =
                 rapier_ctx.cast_ray(pos, cast_dir, PLAYER_KICK_RANGE, true, filter)
             {
-                info!("hit {entity:?}!");
-                //TODO: do something instead of instakill
-                cmd.entity(entity).despawn_recursive();
+                event_writer.send(Kicked { target: entity, direction: cast_dir});
             }
         }
     }
@@ -254,16 +257,33 @@ impl Plugin {
             // cmd.spawn_bundle()
         }
     }
+
+    fn handle_kick(
+        mut cmd: Commands,
+        mut event_reader: EventReader<Kicked>,
+        q_enemy: Query<Entity, With<Enemy>>,
+    ) {
+        for event in event_reader.iter() {
+            if q_enemy.get(event.target).is_ok() {
+                cmd.entity(event.target).insert(ExternalImpulse {
+                    impulse: event.direction * PLAYER_KICK_FORCE,
+                    torque_impulse: 0.0,
+                });
+            }
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_system(Self::movement.run_in_state(GameState::InGame))
             .add_system(Self::animate.run_in_state(GameState::InGame))
-            .add_system(Self::attack.run_in_state(GameState::InGame))
+            .add_system(Self::kick.run_in_state(GameState::InGame))
             .add_system(Self::init_throw.run_in_state(GameState::InGame))
+            .add_system(Self::handle_kick.run_in_state(GameState::InGame))
             .init_resource::<InputDirection>()
             .init_resource::<PlayerDirection>()
+            .add_event::<Kicked>()
             .register_ldtk_entity::<PlayerBundle>("Player");
     }
 }

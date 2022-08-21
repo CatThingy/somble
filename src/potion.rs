@@ -2,7 +2,12 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::{consts::*, player::Player, utils::MousePosition, Element, GameState};
+use crate::{
+    consts::*,
+    player::Player,
+    utils::{MousePosition, TimeIndependent, TimeScale, UniformAnim},
+    Element, GameState,
+};
 
 #[derive(Component)]
 pub struct PotionBrewUi;
@@ -38,7 +43,11 @@ pub struct ThrowPotion(pub Element, pub Element);
 
 pub struct Plugin;
 impl Plugin {
-    fn init(mut cmd: Commands, assets: Res<AssetServer>) {
+    fn init(
+        mut cmd: Commands,
+        assets: Res<AssetServer>,
+        mut atlases: ResMut<Assets<TextureAtlas>>,
+    ) {
         cmd.spawn_bundle(SpriteBundle {
             sprite: Sprite {
                 custom_size: Some(Vec2::splat(BREW_UI_SIZE)),
@@ -52,7 +61,60 @@ impl Plugin {
             },
             ..default()
         })
-        .insert(PotionBrewUi);
+        .insert(PotionBrewUi)
+        .with_children(|root| {
+            let data = [
+                //Fire
+                {
+                    let tex = assets.load("fire_essence.png");
+                    atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(8.0), 5, 1))
+                },
+                //Water
+                {
+                    let tex = assets.load("water_essence.png");
+                    atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(8.0), 5, 1))
+                },
+                //Wind
+                {
+                    let tex = assets.load("wind_essence.png");
+                    atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(8.0), 5, 1))
+                },
+                //Lightning
+                {
+                    let tex = assets.load("lightning_essence.png");
+                    atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(8.0), 5, 1))
+                },
+                //Earth
+                {
+                    let tex = assets.load("earth_essence.png");
+                    atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(8.0), 5, 1))
+                },
+            ];
+            for i in 0..5 {
+                let angle = std::f32::consts::PI * (1.5 - (2 * i) as f32) / 5.0;
+
+                root.spawn_bundle(SpatialBundle {
+                    transform: Transform {
+                        translation: Vec3::new(
+                            angle.cos() * BREW_UI_ICON_DISTANCE,
+                            angle.sin() * BREW_UI_ICON_DISTANCE,
+                            0.5,
+                        ),
+                        ..default()
+                    },
+                    ..default()
+                })
+                .insert_bundle((
+                    data[i].to_owned(),
+                    TextureAtlasSprite {
+                        custom_size: Some(Vec2::splat(BREW_UI_ICON_SIZE)),
+                        ..default()
+                    },
+                    UniformAnim(Timer::from_seconds(0.1, true)),
+                    TimeIndependent,
+                ));
+            }
+        });
     }
     fn throw_potion(
         mut cmd: Commands,
@@ -135,23 +197,15 @@ impl Plugin {
     fn manage_brew_state(
         brew_state: Res<PotionBrewState>,
         mut brew_data: ResMut<PotionBrewData>,
-        mut rapier_cfg: ResMut<RapierConfiguration>,
+        mut time_scale: ResMut<TimeScale>,
         mut q_brew_ui: Query<&mut Visibility, With<PotionBrewUi>>,
     ) {
         if brew_state.is_changed() && *brew_state == PotionBrewState::Active {
-            rapier_cfg.timestep_mode = TimestepMode::Variable {
-                max_dt: 1.0 / 60.0,
-                time_scale: 0.01,
-                substeps: 1,
-            };
+            **time_scale = 0.01;
             q_brew_ui.single_mut().is_visible = true;
             brew_data.contents = (None, None);
         } else if brew_state.is_changed() && *brew_state == PotionBrewState::Inactive {
-            rapier_cfg.timestep_mode = TimestepMode::Variable {
-                max_dt: 1.0 / 60.0,
-                time_scale: 1.0,
-                substeps: 1,
-            };
+            **time_scale = 1.0;
             q_brew_ui.single_mut().is_visible = false;
         }
     }

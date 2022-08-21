@@ -10,6 +10,7 @@ use ordered_float::OrderedFloat;
 use pathfinding::directed::astar::astar;
 
 use crate::level::WalkableTiles;
+use crate::utils::UniformAnim;
 use crate::{consts::*, player::Player, Enemy, GameState};
 
 #[derive(Component, Deref, DerefMut)]
@@ -25,6 +26,7 @@ pub struct ElementalBundle {
     locked: LockedAxes,
     damping: Damping,
     hitstun: HitstunTimer,
+    anim: UniformAnim,
     #[bundle]
     spritesheet: SpriteSheetBundle,
 }
@@ -59,6 +61,8 @@ impl LdtkEntity for ElementalBundle {
                 linear_damping: 20.0,
                 angular_damping: 0.0,
             },
+            anim: UniformAnim(Timer::from_seconds(0.1, true)),
+            hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
@@ -69,7 +73,6 @@ impl LdtkEntity for ElementalBundle {
                 texture_atlas,
                 ..default()
             },
-            hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
         }
     }
 }
@@ -163,9 +166,18 @@ impl Plugin {
         }
     }
 
-    fn tick_hitstun(mut q_enemy: Query<&mut HitstunTimer, With<Enemy>>, time: Res<Time>) {
-        for mut timer in &mut q_enemy {
+    fn tick_hitstun(
+        mut q_enemy: Query<(&mut HitstunTimer, &mut UniformAnim), With<Enemy>>,
+        time: Res<Time>,
+    ) {
+        for (mut timer, mut anim) in &mut q_enemy {
             timer.tick(time.delta());
+
+            if timer.finished() && anim.paused() {
+                anim.unpause();
+            } else if !timer.finished() && !anim.paused() {
+                anim.pause();
+            }
         }
     }
 }

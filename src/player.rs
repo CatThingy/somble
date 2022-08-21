@@ -7,7 +7,7 @@ use iyes_loopless::prelude::*;
 
 use crate::enemy::HitstunTimer;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
-use crate::utils::MousePosition;
+use crate::utils::{MousePosition, TimeScale};
 use crate::{consts::*, Enemy, GameState};
 
 #[derive(Component)]
@@ -147,6 +147,7 @@ impl Plugin {
     fn animate(
         mut q_player: Query<(&mut AnimationTimer, &mut TextureAtlasSprite), With<Player>>,
         time: Res<Time>,
+        time_scale: Res<TimeScale>,
         player_direction: Res<PlayerDirection>,
         input_direction: Res<InputDirection>,
     ) {
@@ -183,7 +184,7 @@ impl Plugin {
             }
         }
         if **input_direction != Vec2::ZERO {
-            timer.tick(time.delta());
+            timer.tick(time.delta().mul_f32(**time_scale));
 
             if timer.just_finished() {
                 match **player_direction {

@@ -1,5 +1,7 @@
 use bevy::{prelude::*, render::camera::RenderTarget};
 
+use bevy_rapier2d::prelude::*;
+
 use crate::{consts::*, player::Player, MainCamera};
 
 #[derive(Default, Deref, DerefMut, Debug)]
@@ -7,6 +9,15 @@ pub struct MousePosition(pub Vec3);
 
 #[derive(Component)]
 pub struct CameraFocus;
+
+#[derive(Component)]
+pub struct TimeIndependent;
+
+#[derive(Component, Default, Deref, DerefMut)]
+pub struct TimeScale(pub f32);
+
+#[derive(Component, Deref, DerefMut, Clone)]
+pub struct UniformAnim(pub Timer);
 
 pub struct Plugin;
 
@@ -118,6 +129,43 @@ impl Plugin {
             + mouse_offset.clamp_length_max(CAMERA_PAN_RANGE))
         .extend(0.0);
     }
+
+    fn update_animations(
+        mut q_animated: Query<(
+            &mut TextureAtlasSprite,
+            &mut UniformAnim,
+            &Handle<TextureAtlas>,
+            Option<&TimeIndependent>,
+        )>,
+        atlases: Res<Assets<TextureAtlas>>,
+        time: Res<Time>,
+        time_scale: Res<TimeScale>,
+    ) {
+        for (mut sprite, mut timer, handle, independent) in &mut q_animated {
+            timer.tick(if independent.is_some() {
+                time.delta()
+            } else {
+                time.delta().mul_f32(**time_scale)
+            });
+            if timer.just_finished() {
+                let atlas = atlases.get(handle).unwrap();
+                sprite.index = (sprite.index + 1) % atlas.textures.len();
+            }
+        }
+    }
+
+    fn propagate_time_scale(
+        mut rapier_cfg: ResMut<RapierConfiguration>,
+        time_scale: Res<TimeScale>,
+    ) {
+        if time_scale.is_changed() {
+            rapier_cfg.timestep_mode = TimestepMode::Variable {
+                max_dt: 1.0 / 60.0,
+                time_scale: **time_scale,
+                substeps: 1,
+            };
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
@@ -127,6 +175,9 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::set_focus_on_player_spawn)
             .add_system_to_stage(CoreStage::Last, Self::follow_camera_focus)
             .add_system(Self::update_focus_pos)
-            .init_resource::<MousePosition>();
+            .add_system(Self::update_animations)
+            .add_system(Self::propagate_time_scale)
+            .init_resource::<MousePosition>()
+            .init_resource::<TimeScale>();
     }
 }

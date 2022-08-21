@@ -20,6 +20,9 @@ pub static CAMERA_PAN_SCALE: f32 = 0.0625;
 pub static BREW_UI_SIZE: f32 = 128.0;
 pub static BREW_UI_DEADZONE: f32 = 16.0;
 
+pub static BREW_UI_ICON_SIZE: f32 = 8.0;
+pub static BREW_UI_ICON_DISTANCE: f32 = 32.0;
+
 pub static POTION_THROW_SPEED: f32 = 400.0;
 pub static POTION_SPIN_SPEED: f32 = 32.0;
 

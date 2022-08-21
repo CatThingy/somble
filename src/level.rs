@@ -1,39 +1,20 @@
 use bevy::prelude::*;
 
-use bevy::sprite::Anchor;
+use bevy::utils::HashSet;
 use bevy_ecs_ldtk::prelude::*;
+use bevy_ecs_ldtk::utils::translation_to_grid_coords;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::consts::*;
-use crate::Enemy;
 use crate::GameState;
-
-pub struct Plugin;
-
-impl Plugin {
-    fn init(mut cmd: Commands, assets: Res<AssetServer>) {
-        cmd.spawn_bundle(LdtkWorldBundle {
-            ldtk_handle: assets.load("test.ldtk"),
-            ..default()
-        });
-    }
-}
-
-impl bevy::app::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_enter_system(GameState::InGame, Self::init)
-            .insert_resource(LevelSelection::Index(0))
-            .register_ldtk_int_cell::<WallBundle>(1)
-            .register_ldtk_entity::<ElementalBundle>("Elemental");
-    }
-}
 
 #[derive(Bundle)]
 pub struct WallBundle {
     pub collider: Collider,
     pub groups: CollisionGroups,
     pub locked: LockedAxes,
+    pub friction: Friction,
 }
 
 impl Default for WallBundle {
@@ -49,6 +30,10 @@ impl Default for WallBundle {
                     | ENEMY_ATTACK_COLLISION_GROUP,
             },
             locked: LockedAxes::all(),
+            friction: Friction {
+                coefficient: 0.0,
+                combine_rule: CoefficientCombineRule::Min,
+            },
         }
     }
 }
@@ -59,59 +44,46 @@ impl LdtkIntCell for WallBundle {
     }
 }
 
-#[derive(Bundle)]
-pub struct ElementalBundle {
-    enemy: Enemy,
-    body: RigidBody,
-    velocity: Velocity,
-    collider: Collider,
-    groups: CollisionGroups,
-    locked: LockedAxes,
-    damping: Damping,
-    #[bundle]
-    spritesheet: SpriteSheetBundle,
+#[derive(Component, Default)]
+pub struct Walkable;
+
+#[derive(Bundle, LdtkIntCell)]
+pub struct WalkableBundle {
+    walkable: Walkable,
 }
 
-impl LdtkEntity for ElementalBundle {
-    fn bundle_entity(
-        _: &EntityInstance,
-        _: &LayerInstance,
-        _: Option<&Handle<Image>>,
-        _: Option<&TilesetDefinition>,
-        asset_server: &AssetServer,
-        texture_atlases: &mut Assets<TextureAtlas>,
-    ) -> Self {
-        let elemental_texture = asset_server.load("elemental.png");
-        let elemental_atlas =
-            TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 3, 1);
-        let texture_atlas = texture_atlases.add(elemental_atlas);
-        ElementalBundle {
-            enemy: Enemy,
-            body: RigidBody::Dynamic,
-            velocity: Velocity::default(),
-            collider: Collider::ball(8.0),
-            groups: CollisionGroups {
-                memberships: ENEMY_COLLISION_GROUP,
-                filters: PLAYER_COLLISION_GROUP
-                    | ENEMY_COLLISION_GROUP
-                    | WALL_COLLISION_GROUP
-                    | PLAYER_ATTACK_COLLISION_GROUP,
-            },
-            locked: LockedAxes::ROTATION_LOCKED,
-            damping: Damping {
-                linear_damping: 20.0,
-                angular_damping: 0.0,
-            },
-            spritesheet: SpriteSheetBundle {
-                sprite: TextureAtlasSprite {
-                    anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
-                    index: 0,
-                    color: Color::LIME_GREEN,
-                    ..default()
-                },
-                texture_atlas,
-                ..default()
-            },
+#[derive(Default, Deref, DerefMut)]
+pub struct WalkableTiles(HashSet<IVec2>);
+
+pub struct Plugin;
+
+impl Plugin {
+    fn init(mut cmd: Commands, assets: Res<AssetServer>) {
+        cmd.spawn_bundle(LdtkWorldBundle {
+            ldtk_handle: assets.load("test.ldtk"),
+            ..default()
+        });
+    }
+
+    fn register_walkable(
+        q_tiles: Query<&Transform, Added<Walkable>>,
+        mut walkables: ResMut<WalkableTiles>,
+    ) {
+        for tile in &q_tiles {
+            let tile_pos =
+                translation_to_grid_coords(tile.translation.truncate(), IVec2::splat(GRID_SIZE));
+            walkables.insert(tile_pos.into());
         }
+    }
+}
+
+impl bevy::app::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_enter_system(GameState::InGame, Self::init)
+            .add_system(Self::register_walkable.run_in_state(GameState::InGame))
+            .insert_resource(LevelSelection::Index(0))
+            .init_resource::<WalkableTiles>()
+            .register_ldtk_int_cell::<WallBundle>(1)
+            .register_ldtk_int_cell::<WalkableBundle>(2);
     }
 }

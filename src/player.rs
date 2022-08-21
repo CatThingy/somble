@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use bevy::{prelude::*, sprite::Anchor};
 use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
+use crate::enemy::HitstunTimer;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
 use crate::utils::MousePosition;
 use crate::{consts::*, Enemy, GameState};
@@ -273,14 +276,16 @@ impl Plugin {
     fn handle_kick(
         mut cmd: Commands,
         mut event_reader: EventReader<Kicked>,
-        q_enemy: Query<Entity, With<Enemy>>,
+        mut q_enemy: Query<&mut HitstunTimer, With<Enemy>>,
     ) {
         for event in event_reader.iter() {
-            if q_enemy.get(event.target).is_ok() {
+            if let Ok(mut hitstun_timer) = q_enemy.get_mut(event.target) {
                 cmd.entity(event.target).insert(ExternalImpulse {
                     impulse: event.direction * PLAYER_KICK_FORCE,
                     torque_impulse: 0.0,
                 });
+                hitstun_timer.set_duration(Duration::from_secs_f32(PLAYER_KICK_HITSTUN_SECS));
+                hitstun_timer.reset();
             }
         }
     }

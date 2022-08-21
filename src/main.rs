@@ -1,4 +1,5 @@
 mod consts;
+mod enemy;
 mod level;
 mod player;
 mod potion;
@@ -49,6 +50,7 @@ fn main() {
         .add_plugin(level::Plugin)
         .add_plugin(player::Plugin)
         .add_plugin(potion::Plugin)
+        .add_plugin(enemy::Plugin)
         .add_startup_system(init)
         .run();
 }

@@ -3,8 +3,9 @@ use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
+use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
 use crate::utils::MousePosition;
-use crate::{consts::*, GameState, Enemy};
+use crate::{consts::*, Enemy, GameState};
 
 #[derive(Component)]
 pub struct Player;
@@ -20,7 +21,7 @@ pub struct PlayerDirection(IVec2);
 
 struct Kicked {
     target: Entity,
-    direction: Vec2
+    direction: Vec2,
 }
 
 #[derive(Bundle)]
@@ -235,16 +236,22 @@ impl Plugin {
             if let Some((entity, _)) =
                 rapier_ctx.cast_ray(pos, cast_dir, PLAYER_KICK_RANGE, true, filter)
             {
-                event_writer.send(Kicked { target: entity, direction: cast_dir});
+                event_writer.send(Kicked {
+                    target: entity,
+                    direction: cast_dir,
+                });
             }
         }
     }
 
     fn init_throw(
-        // mut cmd: Commands,
         mouse_pos: Res<MousePosition>,
         mouse_buttons: Res<Input<MouseButton>>,
-        q_player: Query<&Transform, With<Player>>,
+        q_player: Query<&Transform, (With<Player>, Without<PotionBrewUi>)>,
+        mut q_brew_ui: Query<&mut Transform, (Without<Player>, With<PotionBrewUi>)>,
+
+        mut brew_data: ResMut<PotionBrewData>,
+        mut brew_state: ResMut<PotionBrewState>,
     ) {
         let player = match q_player.get_single() {
             Ok(v) => v,
@@ -253,8 +260,13 @@ impl Plugin {
         if mouse_buttons.just_pressed(MouseButton::Right) {
             let pos = player.translation.truncate();
             let throw_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
-            info!("AAAH I'VE BEEN THROWN IN THE DIRECTION {throw_dir}");
-            // cmd.spawn_bundle()
+            let mut brew_ui_transform = q_brew_ui.single_mut();
+
+            brew_ui_transform.translation.x = mouse_pos.x;
+            brew_ui_transform.translation.y = mouse_pos.y;
+
+            brew_data.direction = throw_dir;
+            *brew_state = PotionBrewState::Active;
         }
     }
 
@@ -273,7 +285,6 @@ impl Plugin {
         }
     }
 }
-
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_system(Self::movement.run_in_state(GameState::InGame))

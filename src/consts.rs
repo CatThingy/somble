@@ -15,3 +15,9 @@ pub static PLAYER_WALK_ANIM_FRAMES: usize = 2;
 pub static CAMERA_PAN_SPEED: f32 = 20.0;
 pub static CAMERA_PAN_RANGE: f32 = 16.0;
 pub static CAMERA_PAN_SCALE: f32 = 0.0625;
+
+pub static BREW_UI_SIZE: f32 = 128.0;
+pub static BREW_UI_DEADZONE: f32 = 16.0;
+
+pub static POTION_THROW_SPEED: f32 = 400.0;
+pub static POTION_SPIN_SPEED: f32 = 32.0;

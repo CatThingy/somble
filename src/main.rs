@@ -1,6 +1,7 @@
 mod consts;
 mod level;
 mod player;
+mod potion;
 mod utils;
 
 use bevy::{prelude::*, render::texture::ImageSettings};
@@ -22,6 +23,15 @@ pub enum GameState {
     InGame,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum Element {
+    Fire,
+    Water,
+    Wind,
+    Lightning,
+    Earth,
+}
+
 fn main() {
     App::new()
         .insert_resource(RapierConfiguration {
@@ -32,12 +42,13 @@ fn main() {
         .add_loopless_state(GameState::InGame)
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
-        .add_plugin(RapierDebugRenderPlugin::default())
+        // .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::default())
         .add_plugin(LdtkPlugin)
         .add_plugin(utils::Plugin)
         .add_plugin(level::Plugin)
         .add_plugin(player::Plugin)
+        .add_plugin(potion::Plugin)
         .add_startup_system(init)
         .run();
 }

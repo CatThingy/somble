@@ -4,7 +4,7 @@ use iyes_loopless::prelude::*;
 
 use crate::{
     consts::*,
-    hitbox::{DirectedImpulse, Hitbox, Hitstun, RadialImpulse, RadialForce, DirectedForce},
+    hitbox::{DirectedForce, DirectedImpulse, Hitbox, Hitstun, RadialForce, RadialImpulse},
     player::Player,
     utils::{
         DespawnTimer, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale, UniformAnim,
@@ -137,12 +137,12 @@ fn wind_wind(
     //TODO: art
     spawned
         .insert_bundle((
-        //     TextureAtlasSprite::default(),
-        //     {
-        //         let tex = assets.load("fire_fire.png");
-        //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-        //     },
-        //     UniformAnim(Timer::from_seconds(0.1, true)),
+            //     TextureAtlasSprite::default(),
+            //     {
+            //         let tex = assets.load("fire_fire.png");
+            //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            //     },
+            //     UniformAnim(Timer::from_seconds(0.1, true)),
             DespawnTimer(Timer::from_seconds(2.0, false)),
         ))
         .with_children(|parent| {
@@ -158,11 +158,164 @@ fn wind_wind(
                     Sensor,
                     Hitbox,
                     Hitstun(0.1),
-                    RadialForce::new(-2.5),
+                    RadialForce::new(-5.0),
                 ));
         });
-
 }
+
+fn lightning_lightning(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+    spawned
+        .insert_bundle((
+            // TextureAtlasSprite::default(),
+            // {
+            //     let tex = assets.load("fire_fire.png");
+            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            // },
+            // UniformAnim(Timer::from_seconds(0.1, true)),
+            // DespawnTimer(Timer::from_seconds(0.5, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(2.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    Hitstun(3.0),
+                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                ));
+        });
+}
+
+fn earth_earth(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+    spawned
+        .insert_bundle((
+            // TextureAtlasSprite::default(),
+            // {
+            //     let tex = assets.load("fire_fire.png");
+            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            // },
+            // UniformAnim(Timer::from_seconds(0.1, true)),
+            // DespawnTimer(Timer::from_seconds(0.5, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(16.0),
+                    CollisionGroups {
+                        memberships: WALL_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP
+                            | PLAYER_COLLISION_GROUP
+                            | PLAYER_ATTACK_COLLISION_GROUP
+                            | ENEMY_ATTACK_COLLISION_GROUP,
+                    },
+                    DespawnTimer(Timer::from_seconds(2.0, false)),
+                ));
+        });
+}
+
+fn fire_water(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+    //TODO: art
+    spawned
+        .insert_bundle((
+            //     TextureAtlasSprite::default(),
+            //     {
+            //         let tex = assets.load("fire_fire.png");
+            //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            //     },
+            //     UniformAnim(Timer::from_seconds(0.1, true)),
+            DespawnTimer(Timer::from_seconds(2.0, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(32.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    Hitstun(0.1),
+                    RadialForce::new(5.0),
+                ));
+        });
+}
+fn fire_wind(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn fire_lightning(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn fire_earth(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn water_wind(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn water_lightning(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn water_earth(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn wind_lightning(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn wind_earth(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+fn lightning_earth(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+}
+
 pub struct Plugin;
 impl Plugin {
     fn init(
@@ -416,74 +569,70 @@ impl Plugin {
                         continue;
                     }
 
+                    let mut spawned = cmd.spawn_bundle(SpatialBundle {
+                        transform: Transform {
+                            translation: location,
+                            ..default()
+                        },
+                        ..default()
+                    });
                     {
                         use Element::*;
                         match (potion_type.0, potion_type.1) {
                             (Fire, Fire) => {
-                                let mut spawned = cmd.spawn_bundle(SpatialBundle {
-                                    transform: Transform {
-                                        translation: location,
-                                        ..default()
-                                    },
-                                    ..default()
-                                });
                                 fire_fire(&mut spawned, &assets, &mut atlases);
                             }
                             (Water, Water) => {
-                                let mut spawned = cmd.spawn_bundle(SpatialBundle {
-                                    transform: Transform {
-                                        translation: location,
-                                        ..default()
-                                    },
-                                    ..default()
-                                });
                                 water_water(&mut spawned, &assets, &mut atlases, velocity);
                             }
                             (Wind, Wind) => {
-                                let mut spawned = cmd.spawn_bundle(SpatialBundle {
-                                    transform: Transform {
-                                        translation: location,
-                                        ..default()
-                                    },
-                                    ..default()
-                                });
                                 wind_wind(&mut spawned, &assets, &mut atlases);
-                                //Tornado - pulls towards center
                             }
                             (Lightning, Lightning) => {
-                                //lightning strike; big damage, small area
+                                lightning_lightning(&mut spawned, &assets, &mut atlases);
                             }
                             (Earth, Earth) => {
+                                earth_earth(&mut spawned, &assets, &mut atlases);
                                 //big rock just sprouts and blocks stuff
                             }
                             (Fire, Water) | (Water, Fire) => {
+                                fire_water(&mut spawned, &assets, &mut atlases);
                                 //steam geyser - shoves away
                             }
                             (Fire, Wind) | (Wind, Fire) => {
+                                fire_wind(&mut spawned, &assets, &mut atlases);
                                 //sets things on fire (big area, dot)
                             }
                             (Fire, Lightning) | (Lightning, Fire) => {
+                                fire_lightning(&mut spawned, &assets, &mut atlases);
                                 //delayed explosion, sticks to 1 enemy
                             }
                             (Fire, Earth) | (Earth, Fire) => {
+                                fire_earth(&mut spawned, &assets, &mut atlases);
                                 //Damaging lava puddle
                             }
                             (Water, Wind) | (Wind, Water) => {
+                                water_wind(&mut spawned, &assets, &mut atlases);
                                 //homing rain cloud - slows enemies under it
                             }
                             (Water, Lightning) | (Lightning, Water) => {
+                                water_lightning(&mut spawned, &assets, &mut atlases);
                                 //Affected enemies shoot lightning at nearby enemies
                             }
                             (Water, Earth) | (Earth, Water) => {
+                                water_earth(&mut spawned, &assets, &mut atlases);
                                 //grows vines on the ground, damaging enemies that walk through
                             }
                             (Wind, Lightning) | (Lightning, Wind) => {
+                                wind_lightning(&mut spawned, &assets, &mut atlases);
                                 //homing storm cloud
                             }
                             (Wind, Earth) | (Earth, Wind) => {
+                                wind_earth(&mut spawned, &assets, &mut atlases);
                                 //dust storm - blinds
                             }
                             (Lightning, Earth) | (Earth, Lightning) => {
+                                lightning_earth(&mut spawned, &assets, &mut atlases);
                                 //lightning strikes at location, sparks go through ground back to player
                             }
                         }

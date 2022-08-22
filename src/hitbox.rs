@@ -186,7 +186,7 @@ impl Plugin {
                 let mut iter = q_enemy.iter_many_mut(radial_force.hostages.iter());
 
                 while let Some((entity, transform, mut hitstun)) = iter.fetch_next() {
-                    hitstun.reset();
+                    // hitstun.reset();
                     let force_direction =
                         (transform.translation() - origin.translation()).truncate();
                     cmd.entity(entity).insert(ExternalImpulse {
@@ -200,7 +200,7 @@ impl Plugin {
                 let mut iter = q_enemy.iter_many_mut(directed_force.hostages.iter());
 
                 while let Some((entity, transform, mut hitstun)) = iter.fetch_next() {
-                    hitstun.reset();
+                    // hitstun.reset();
                     cmd.entity(entity).insert(ExternalImpulse {
                         impulse: directed_force.force,
                         torque_impulse: 0.0,

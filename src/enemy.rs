@@ -48,7 +48,7 @@ impl LdtkEntity for ElementalBundle {
             enemy: Enemy,
             body: RigidBody::Dynamic,
             velocity: Velocity::default(),
-            collider: Collider::ball(8.0),
+            collider: Collider::ball(5.0),
             groups: CollisionGroups {
                 memberships: ENEMY_COLLISION_GROUP,
                 filters: PLAYER_COLLISION_GROUP
@@ -82,7 +82,13 @@ pub struct Plugin;
 impl Plugin {
     fn movement(
         mut q_enemy: Query<
-            (&Transform, &mut Velocity, &HitstunTimer),
+            (
+                &Transform,
+                &mut Velocity,
+                &HitstunTimer,
+                &mut TextureAtlasSprite,
+                &Collider,
+            ),
             (With<Enemy>, Without<Player>),
         >,
         q_player: Query<(&Transform, Entity), (Without<Enemy>, With<Player>)>,
@@ -106,20 +112,20 @@ impl Plugin {
             ..default()
         };
 
-        for (enemy_transform, mut enemy_vel, hitstun) in &mut q_enemy {
+        for (transform, mut vel, hitstun, mut sprite, collider) in &mut q_enemy {
             if !hitstun.finished() {
                 continue;
             }
-            let enemy_pos = enemy_transform.translation.truncate();
-            let direction = player_pos - enemy_pos;
+            let pos = transform.translation.truncate();
+            let direction = player_pos - pos;
             if let Some((hit, _)) =
-                rapier_ctx.cast_ray(enemy_pos, direction, f32::MAX, true, sight_filter)
+                rapier_ctx.cast_shape(pos, 0.0, direction, collider, f32::MAX, sight_filter)
             {
                 if hit == player {
-                    enemy_vel.linvel = direction.normalize() * ELEMENTAL_SPEED;
+                    vel.linvel = direction.normalize() * ELEMENTAL_SPEED;
                 } else {
                     let enemy_tile_pos: IVec2 =
-                        translation_to_grid_coords(enemy_pos, IVec2::splat(GRID_SIZE)).into();
+                        translation_to_grid_coords(pos, IVec2::splat(GRID_SIZE)).into();
                     if let Some((path, _)) = astar(
                         &enemy_tile_pos,
                         |&node| {
@@ -127,22 +133,36 @@ impl Plugin {
                                 OrderedFloat(std::f32::consts::SQRT_2);
                             const ONE: OrderedFloat<f32> = OrderedFloat(1.0);
 
-                            const NEIGHBOURS: [(IVec2, OrderedFloat<f32>); 8] = [
-                                (IVec2::from_array([-1, -1]), SQRT_2),
+                            const CARDINAL_NEIGHBOURS: [(IVec2, OrderedFloat<f32>); 4] = [
                                 (IVec2::from_array([-1, 0]), ONE),
-                                (IVec2::from_array([-1, 1]), SQRT_2),
                                 (IVec2::from_array([0, 1]), ONE),
-                                (IVec2::from_array([1, 1]), SQRT_2),
                                 (IVec2::from_array([1, 0]), ONE),
-                                (IVec2::from_array([1, -1]), SQRT_2),
                                 (IVec2::from_array([0, -1]), ONE),
+                            ];
+                            const DIAGONAL_NEIGHBOURS: [(IVec2, OrderedFloat<f32>); 4] = [
+                                (IVec2::from_array([-1, -1]), SQRT_2),
+                                (IVec2::from_array([-1, 1]), SQRT_2),
+                                (IVec2::from_array([1, 1]), SQRT_2),
+                                (IVec2::from_array([1, -1]), SQRT_2),
                             ];
 
                             let mut output: Vec<(IVec2, OrderedFloat<f32>)> = vec![];
 
-                            for (neighbour, dist) in NEIGHBOURS {
+                            for (neighbour, dist) in CARDINAL_NEIGHBOURS {
                                 let next = node + neighbour;
                                 if walkables.contains(&next) {
+                                    output.push((next, dist));
+                                }
+                            }
+
+                            for (neighbour, dist) in DIAGONAL_NEIGHBOURS {
+                                let next = node + neighbour;
+                                let x_adj = node + IVec2::new(neighbour.x, 0);
+                                let y_adj = node + IVec2::new(0, neighbour.y);
+                                if walkables.contains(&next)
+                                    && walkables.contains(&x_adj)
+                                    && walkables.contains(&y_adj)
+                                {
                                     output.push((next, dist));
                                 }
                             }
@@ -152,17 +172,27 @@ impl Plugin {
                         |&node| OrderedFloat((player_tile_pos - node).as_vec2().length()),
                         |&node| player_tile_pos == node,
                     ) {
-                        let target = grid_coords_to_translation_centered(
-                            path[1].to_owned().into(),
-                            IVec2::splat(GRID_SIZE),
-                        );
+                        let mut path = path.iter().map(|v| {
+                            grid_coords_to_translation_centered(
+                                v.to_owned().into(),
+                                IVec2::splat(GRID_SIZE),
+                            )
+                        });
+                        let first = path.next().unwrap();
+                        let second = path.next().unwrap();
+                        let target = if pos.dot(first).signum() * pos.dot(second).signum() < 0.0 {
+                            first
+                        } else {
+                            second
+                        };
 
-                        let direction = target - enemy_pos;
+                        let direction = target - pos;
 
-                        enemy_vel.linvel = direction.normalize() * ELEMENTAL_SPEED;
+                        vel.linvel = direction.normalize_or_zero() * ELEMENTAL_SPEED;
                     };
                 }
             }
+            sprite.flip_x = vel.linvel.x < 0.0;
         }
     }
 

@@ -224,7 +224,11 @@ impl Plugin {
         q_player: Query<&Transform, With<Player>>,
         mouse_buttons: Res<Input<MouseButton>>,
         mut event_writer: EventWriter<Kicked>,
+        brew_state: Res<PotionBrewState>,
     ) {
+        if *brew_state != PotionBrewState::Inactive {
+            return;
+        }
         let player = match q_player.get_single() {
             Ok(v) => v,
             Err(_) => return,

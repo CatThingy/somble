@@ -10,6 +10,7 @@ use ordered_float::OrderedFloat;
 use pathfinding::directed::astar::astar;
 
 use crate::level::WalkableTiles;
+use crate::utils::TimeScale;
 use crate::utils::UniformAnim;
 use crate::{consts::*, player::Player, Enemy, GameState};
 
@@ -204,9 +205,10 @@ impl Plugin {
     fn tick_hitstun(
         mut q_enemy: Query<(&mut HitstunTimer, &mut UniformAnim), With<Enemy>>,
         time: Res<Time>,
+        time_scale: Res<TimeScale>
     ) {
         for (mut timer, mut anim) in &mut q_enemy {
-            timer.tick(time.delta());
+            timer.tick(time.delta().mul_f32(**time_scale));
 
             if timer.finished() && anim.paused() {
                 anim.unpause();

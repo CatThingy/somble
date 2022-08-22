@@ -4,7 +4,7 @@ use iyes_loopless::prelude::*;
 
 use crate::{
     consts::*,
-    hitbox::{DirectedImpulse, Hitbox, Hitstun, RadialImpulse},
+    hitbox::{DirectedImpulse, Hitbox, Hitstun, RadialImpulse, RadialForce, DirectedForce},
     player::Player,
     utils::{
         DespawnTimer, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale, UniformAnim,
@@ -123,12 +123,46 @@ fn water_water(
                     Sensor,
                     Hitbox,
                     Hitstun(0.25),
-                    DirectedImpulse(direction * 50.0),
+                    DirectedForce::new(direction * 5.0),
                     DespawnTimer(Timer::from_seconds(0.3, false)),
                 ));
         });
 }
 
+fn wind_wind(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+    //TODO: art
+    spawned
+        .insert_bundle((
+        //     TextureAtlasSprite::default(),
+        //     {
+        //         let tex = assets.load("fire_fire.png");
+        //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+        //     },
+        //     UniformAnim(Timer::from_seconds(0.1, true)),
+            DespawnTimer(Timer::from_seconds(2.0, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(32.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    Hitstun(0.1),
+                    RadialForce::new(-2.5),
+                ));
+        });
+
+}
 pub struct Plugin;
 impl Plugin {
     fn init(
@@ -404,9 +438,16 @@ impl Plugin {
                                     ..default()
                                 });
                                 water_water(&mut spawned, &assets, &mut atlases, velocity);
-                                //big wave - pushes enemies in a direction away from player
                             }
                             (Wind, Wind) => {
+                                let mut spawned = cmd.spawn_bundle(SpatialBundle {
+                                    transform: Transform {
+                                        translation: location,
+                                        ..default()
+                                    },
+                                    ..default()
+                                });
+                                wind_wind(&mut spawned, &assets, &mut atlases);
                                 //Tornado - pulls towards center
                             }
                             (Lightning, Lightning) => {

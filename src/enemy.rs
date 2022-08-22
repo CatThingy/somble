@@ -172,24 +172,29 @@ impl Plugin {
                         |&node| OrderedFloat((player_tile_pos - node).as_vec2().length()),
                         |&node| player_tile_pos == node,
                     ) {
-                        let mut path = path.iter().map(|v| {
-                            grid_coords_to_translation_centered(
-                                v.to_owned().into(),
-                                IVec2::splat(GRID_SIZE),
-                            )
-                        });
-                        let first = path.next().unwrap();
-                        let second = path.next().unwrap();
-                        let target = if pos.dot(first).signum() * pos.dot(second).signum() < 0.0 {
-                            first
+                        if path.len() <= 1 {
+                            vel.linvel = direction.normalize() * ELEMENTAL_SPEED;
                         } else {
-                            second
-                        };
+                            let mut path = path.iter().map(|v| {
+                                grid_coords_to_translation_centered(
+                                    v.to_owned().into(),
+                                    IVec2::splat(GRID_SIZE),
+                                )
+                            });
+                            let first = path.next().unwrap();
+                            let second = path.next().unwrap();
+                            let target = if pos.dot(first).signum() * pos.dot(second).signum() < 0.0
+                            {
+                                first
+                            } else {
+                                second
+                            };
 
-                        let direction = target - pos;
+                            let direction = target - pos;
 
-                        vel.linvel = direction.normalize_or_zero() * ELEMENTAL_SPEED;
-                    };
+                            vel.linvel = direction.normalize_or_zero() * ELEMENTAL_SPEED;
+                        }
+                    }
                 }
             }
             sprite.flip_x = vel.linvel.x < 0.0;

@@ -15,6 +15,9 @@ pub struct Hitstun(pub f32);
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct RadialImpulse(pub f32);
 
+#[derive(Component, Deref, DerefMut, Debug)]
+pub struct DirectedImpulse(pub Vec2);
+
 pub struct Plugin;
 
 impl Plugin {
@@ -23,7 +26,12 @@ impl Plugin {
         mut event_reader: EventReader<CollisionEvent>,
         mut q_enemy: Query<(&GlobalTransform, &mut HitstunTimer), (With<Enemy>, Without<Hitbox>)>,
         q_hitbox: Query<
-            (&GlobalTransform, Option<&Hitstun>, Option<&RadialImpulse>),
+            (
+                &GlobalTransform,
+                Option<&Hitstun>,
+                Option<&RadialImpulse>,
+                Option<&DirectedImpulse>,
+            ),
             (Without<Enemy>, With<Hitbox>),
         >,
     ) {
@@ -54,7 +62,7 @@ impl Plugin {
                     }
 
                     let (enemy_transform, mut hitstun_timer) = enemy_data;
-                    let (hitbox_transform, hitstun, radial_impulse) = hitbox_data;
+                    let (hitbox_transform, hitstun, radial_impulse, directed_impulse) = hitbox_data;
 
                     if let Some(hitstun) = hitstun {
                         hitstun_timer.set_duration(Duration::from_secs_f32(**hitstun));
@@ -67,6 +75,13 @@ impl Plugin {
 
                         cmd.entity(*enemy_entity).insert(ExternalImpulse {
                             impulse: force_direction.normalize() * **radial_impulse,
+                            torque_impulse: 0.0,
+                        });
+                    }
+
+                    if let Some(directed_impulse) = directed_impulse {
+                        cmd.entity(*enemy_entity).insert(ExternalImpulse {
+                            impulse: **directed_impulse,
                             torque_impulse: 0.0,
                         });
                     }

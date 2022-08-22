@@ -1,10 +1,10 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::{
     consts::*,
-    hitbox::{Hitbox, Hitstun, RadialImpulse},
+    hitbox::{DirectedImpulse, Hitbox, Hitstun, RadialImpulse},
     player::Player,
     utils::{
         DespawnTimer, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale, UniformAnim,
@@ -49,6 +49,85 @@ pub enum PotionBrewState {
     Inactive,
 }
 pub struct ThrowPotion(pub Element, pub Element);
+
+fn fire_fire(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+) {
+    spawned
+        .insert_bundle((
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("fire_fire.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.1, true)),
+            DespawnTimer(Timer::from_seconds(0.5, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(32.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    Hitstun(0.5),
+                    RadialImpulse(25.0),
+                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                ));
+        });
+}
+
+fn water_water(
+    spawned: &mut EntityCommands,
+    assets: &Res<AssetServer>,
+    atlases: &mut ResMut<Assets<TextureAtlas>>,
+    velocity: &Velocity,
+) {
+    //TODO: art
+    let direction = velocity.linvel.normalize();
+    spawned
+        .insert_bundle((
+            Velocity {
+                linvel: direction * 100.0,
+                angvel: 0.0,
+            },
+            RigidBody::KinematicVelocityBased,
+            DespawnTimer(Timer::from_seconds(0.6, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle {
+                    transform: Transform {
+                        rotation: Quat::from_axis_angle(
+                            Vec3::Z,
+                            direction.y.atan2(direction.x) + std::f32::consts::PI / 2.0,
+                        ),
+                        ..default()
+                    },
+                    ..default()
+                })
+                .insert_bundle((
+                    Collider::cuboid(32.0, 8.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    Hitstun(0.25),
+                    DirectedImpulse(direction * 50.0),
+                    DespawnTimer(Timer::from_seconds(0.3, false)),
+                ));
+        });
+}
 
 pub struct Plugin;
 impl Plugin {
@@ -277,7 +356,8 @@ impl Plugin {
     fn potion_explode(
         mut cmd: Commands,
         mut event_reader: EventReader<CollisionEvent>,
-        q_potion: Query<(&PotionType, &Transform)>,
+        q_potion: Query<(&PotionType, &Transform, &Velocity)>,
+        q_player: Query<&Transform, With<Player>>,
         assets: Res<AssetServer>,
         mut atlases: ResMut<Assets<TextureAtlas>>,
     ) {
@@ -286,66 +366,44 @@ impl Plugin {
                 CollisionEvent::Started(e1, e2, _) => {
                     let potion_type;
                     let location;
+                    let velocity;
 
-                    if let Ok((p, t)) = q_potion.get(*e1) {
+                    if let Ok((p, t, v)) = q_potion.get(*e1) {
                         cmd.entity(*e1).despawn_recursive();
                         potion_type = p;
                         location = t.translation;
-                    } else if let Ok((p, t)) = q_potion.get(*e2) {
+                        velocity = v;
+                    } else if let Ok((p, t, v)) = q_potion.get(*e2) {
                         cmd.entity(*e2).despawn_recursive();
                         potion_type = p;
                         location = t.translation;
+                        velocity = v;
                     } else {
                         continue;
                     }
-
-                    let mut spawned = cmd.spawn_bundle(SpatialBundle {
-                        transform: Transform {
-                            translation: location,
-                            ..default()
-                        },
-                        ..default()
-                    });
 
                     {
                         use Element::*;
                         match (potion_type.0, potion_type.1) {
                             (Fire, Fire) => {
-                                //big fireball - medium damage, large area
-                                spawned
-                                    .insert_bundle((
-                                        TextureAtlasSprite::default(),
-                                        {
-                                            let tex = assets.load("fire_fire.png");
-                                            atlases.add(TextureAtlas::from_grid(
-                                                tex,
-                                                Vec2::splat(32.0),
-                                                5,
-                                                1,
-                                            ))
-                                        },
-                                        UniformAnim(Timer::from_seconds(0.1, true)),
-                                        DespawnTimer(Timer::from_seconds(0.5, false)),
-                                    ))
-                                    .with_children(|parent| {
-                                        parent
-                                            .spawn_bundle(SpatialBundle::default())
-                                            .insert_bundle((
-                                                Collider::ball(32.0),
-                                                CollisionGroups {
-                                                    memberships: PLAYER_ATTACK_COLLISION_GROUP,
-                                                    filters: ENEMY_COLLISION_GROUP,
-                                                },
-                                                ActiveEvents::COLLISION_EVENTS,
-                                                Sensor,
-                                                Hitbox,
-                                                Hitstun(0.5),
-                                                RadialImpulse(75.0),
-                                                DespawnTimer(Timer::from_seconds(0.1, false)),
-                                            ));
-                                    });
+                                let mut spawned = cmd.spawn_bundle(SpatialBundle {
+                                    transform: Transform {
+                                        translation: location,
+                                        ..default()
+                                    },
+                                    ..default()
+                                });
+                                fire_fire(&mut spawned, &assets, &mut atlases);
                             }
                             (Water, Water) => {
+                                let mut spawned = cmd.spawn_bundle(SpatialBundle {
+                                    transform: Transform {
+                                        translation: location,
+                                        ..default()
+                                    },
+                                    ..default()
+                                });
+                                water_water(&mut spawned, &assets, &mut atlases, velocity);
                                 //big wave - pushes enemies in a direction away from player
                             }
                             (Wind, Wind) => {

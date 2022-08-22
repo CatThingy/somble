@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use bevy::{prelude::*, render::camera::RenderTarget};
 
 use bevy_rapier2d::prelude::*;
@@ -21,6 +23,63 @@ pub struct UniformAnim(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct DespawnTimer(pub Timer);
+
+pub struct ElementIconAtlases(pub [Handle<TextureAtlas>; 5]);
+
+impl Index<usize> for ElementIconAtlases {
+    type Output = Handle<TextureAtlas>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl FromWorld for ElementIconAtlases {
+    fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+        let textures = [
+            assets.load("fire_essence.png"),
+            assets.load("water_essence.png"),
+            assets.load("wind_essence.png"),
+            assets.load("lightning_essence.png"),
+            assets.load("earth_essence.png"),
+        ];
+        let mut atlases = world.resource_mut::<Assets<TextureAtlas>>();
+
+        ElementIconAtlases([
+            atlases.add(TextureAtlas::from_grid(
+                textures[0].clone(),
+                Vec2::splat(8.0),
+                5,
+                1,
+            )),
+            atlases.add(TextureAtlas::from_grid(
+                textures[1].clone(),
+                Vec2::splat(8.0),
+                5,
+                1,
+            )),
+            atlases.add(TextureAtlas::from_grid(
+                textures[2].clone(),
+                Vec2::splat(8.0),
+                5,
+                1,
+            )),
+            atlases.add(TextureAtlas::from_grid(
+                textures[3].clone(),
+                Vec2::splat(8.0),
+                5,
+                1,
+            )),
+            atlases.add(TextureAtlas::from_grid(
+                textures[4].clone(),
+                Vec2::splat(8.0),
+                5,
+                1,
+            )),
+        ])
+    }
+}
 
 pub struct Plugin;
 
@@ -151,7 +210,10 @@ impl Plugin {
                 time.delta().mul_f32(**time_scale)
             });
             if timer.just_finished() {
-                let atlas = atlases.get(handle).unwrap();
+                let atlas = match atlases.get(handle) {
+                    Some(v) => v,
+                    _ => return,
+                };
                 sprite.index = (sprite.index + 1) % atlas.textures.len();
             }
         }
@@ -200,6 +262,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::update_despawn)
             .add_system(Self::propagate_time_scale)
             .init_resource::<MousePosition>()
-            .init_resource::<TimeScale>();
+            .init_resource::<TimeScale>()
+            .init_resource::<ElementIconAtlases>();
     }
 }

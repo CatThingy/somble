@@ -9,11 +9,49 @@ use crate::{enemy::HitstunTimer, Enemy, GameState};
 #[derive(Component)]
 pub struct Hitbox;
 
+#[derive(Debug)]
+pub struct Falloff {
+    ratio: f32,
+    start: f32,
+    end: f32,
+}
+
+impl Falloff {
+    pub fn none() -> Self {
+        Falloff {
+            start: 0.0,
+            end: 0.0,
+            ratio: 1.0,
+        }
+    }
+
+    pub fn new(ratio: f32, start: f32, end: f32) -> Self {
+        Falloff { start, end, ratio }
+    }
+
+    pub fn amount(&self, distance: f32) -> f32 {
+        if self.ratio == 1.0 {
+            return 1.0;
+        }
+        let point = ((distance - self.start) / (self.end - self.start)).clamp(0.0, 1.0);
+        self.ratio + (1.0 - point) * self.ratio
+    }
+}
+
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct Hitstun(pub f32);
 
-#[derive(Component, Deref, DerefMut, Debug)]
-pub struct RadialImpulse(pub f32);
+#[derive(Component, Debug)]
+pub struct RadialImpulse {
+    pub force: f32,
+    pub falloff: Falloff,
+}
+
+impl RadialImpulse {
+    pub fn new(force: f32, falloff: Falloff) -> Self {
+        RadialImpulse { force, falloff }
+    }
+}
 
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct DirectedImpulse(pub Vec2);
@@ -21,13 +59,15 @@ pub struct DirectedImpulse(pub Vec2);
 #[derive(Component, Debug)]
 pub struct RadialForce {
     force: f32,
+    falloff: Falloff,
     hostages: HashSet<Entity>,
 }
 
 impl RadialForce {
-    pub fn new(force: f32) -> Self {
+    pub fn new(force: f32, falloff: Falloff) -> Self {
         RadialForce {
             force,
+            falloff,
             hostages: HashSet::new(),
         }
     }
@@ -113,7 +153,9 @@ impl Plugin {
                         .truncate();
 
                         cmd.entity(*enemy_entity).insert(ExternalImpulse {
-                            impulse: force_direction.normalize() * **radial_impulse,
+                            impulse: force_direction.normalize()
+                                * radial_impulse.force
+                                * radial_impulse.falloff.amount(force_direction.length()),
                             torque_impulse: 0.0,
                         });
                     }
@@ -190,7 +232,9 @@ impl Plugin {
                     let force_direction =
                         (transform.translation() - origin.translation()).truncate();
                     cmd.entity(entity).insert(ExternalImpulse {
-                        impulse: force_direction.normalize() * radial_force.force,
+                        impulse: force_direction.normalize()
+                            * radial_force.force
+                            * radial_force.falloff.amount(force_direction.length()),
                         torque_impulse: 0.0,
                     });
                 }

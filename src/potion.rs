@@ -4,7 +4,9 @@ use iyes_loopless::prelude::*;
 
 use crate::{
     consts::*,
-    hitbox::{DirectedForce, DirectedImpulse, Hitbox, Hitstun, RadialForce, RadialImpulse},
+    hitbox::{
+        DirectedForce, DirectedImpulse, Falloff, Hitbox, Hitstun, RadialForce, RadialImpulse,
+    },
     player::Player,
     utils::{
         DespawnTimer, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale, UniformAnim,
@@ -78,7 +80,7 @@ fn fire_fire(
                     Sensor,
                     Hitbox,
                     Hitstun(0.5),
-                    RadialImpulse(25.0),
+                    RadialImpulse::new(25.0, Falloff::none()),
                     DespawnTimer(Timer::from_seconds(0.1, false)),
                 ));
         });
@@ -158,7 +160,7 @@ fn wind_wind(
                     Sensor,
                     Hitbox,
                     Hitstun(0.1),
-                    RadialForce::new(-5.0),
+                    RadialForce::new(-5.0, Falloff::new(0.5, 5.0, 32.0)),
                 ));
         });
 }
@@ -257,10 +259,11 @@ fn fire_water(
                     Sensor,
                     Hitbox,
                     Hitstun(0.1),
-                    RadialForce::new(5.0),
+                    RadialForce::new(5.0, Falloff::new(0.5, 5.0, 32.0)),
                 ));
         });
 }
+
 fn fire_wind(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,

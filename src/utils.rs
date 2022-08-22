@@ -16,8 +16,11 @@ pub struct TimeIndependent;
 #[derive(Component, Default, Deref, DerefMut)]
 pub struct TimeScale(pub f32);
 
-#[derive(Component, Deref, DerefMut, Clone)]
+#[derive(Component, Deref, DerefMut)]
 pub struct UniformAnim(pub Timer);
+
+#[derive(Component, Deref, DerefMut)]
+pub struct DespawnTimer(pub Timer);
 
 pub struct Plugin;
 
@@ -166,6 +169,24 @@ impl Plugin {
             };
         }
     }
+
+    fn update_despawn(
+        mut cmd: Commands,
+        mut q_despawning: Query<(Entity, &mut DespawnTimer, Option<&TimeIndependent>)>,
+        time: Res<Time>,
+        time_scale: Res<TimeScale>,
+    ) {
+        for (entity, mut timer, independent) in &mut q_despawning {
+            timer.tick(if independent.is_some() {
+                time.delta()
+            } else {
+                time.delta().mul_f32(**time_scale)
+            });
+            if timer.just_finished() {
+                cmd.entity(entity).despawn_recursive();
+            }
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
@@ -176,6 +197,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system_to_stage(CoreStage::Last, Self::follow_camera_focus)
             .add_system(Self::update_focus_pos)
             .add_system(Self::update_animations)
+            .add_system(Self::update_despawn)
             .add_system(Self::propagate_time_scale)
             .init_resource::<MousePosition>()
             .init_resource::<TimeScale>();

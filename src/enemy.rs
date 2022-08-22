@@ -13,7 +13,7 @@ use crate::level::WalkableTiles;
 use crate::utils::UniformAnim;
 use crate::{consts::*, player::Player, Enemy, GameState};
 
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Debug)]
 pub struct HitstunTimer(pub Timer);
 
 #[derive(Bundle)]

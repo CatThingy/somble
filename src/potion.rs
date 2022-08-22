@@ -4,8 +4,9 @@ use iyes_loopless::prelude::*;
 
 use crate::{
     consts::*,
+    hitbox::{Hitbox, Hitstun, RadialImpulse},
     player::Player,
-    utils::{MousePosition, TimeIndependent, TimeScale, UniformAnim},
+    utils::{DespawnTimer, MousePosition, TimeIndependent, TimeScale, UniformAnim},
     Element, GameState,
 };
 
@@ -209,10 +210,12 @@ impl Plugin {
             q_brew_ui.single_mut().is_visible = false;
         }
     }
-    fn read_events(
+    fn potion_explode(
         mut cmd: Commands,
         mut event_reader: EventReader<CollisionEvent>,
         q_potion: Query<(&PotionType, &Transform)>,
+        assets: Res<AssetServer>,
+        mut atlases: ResMut<Assets<TextureAtlas>>,
     ) {
         for event in event_reader.iter() {
             match event {
@@ -232,7 +235,96 @@ impl Plugin {
                         continue;
                     }
 
-                    info!("I exploded at {location} and have the type {potion_type:?}!");
+                    let mut spawned = cmd.spawn_bundle(SpatialBundle {
+                        transform: Transform {
+                            translation: location,
+                            ..default()
+                        },
+                        ..default()
+                    });
+
+                    {
+                        use Element::*;
+                        match (potion_type.0, potion_type.1) {
+                            (Fire, Fire) => {
+                                //big fireball - medium damage, large area
+                                spawned
+                                    .insert_bundle((
+                                        TextureAtlasSprite::default(),
+                                        {
+                                            let tex = assets.load("fire_fire.png");
+                                            atlases.add(TextureAtlas::from_grid(
+                                                tex,
+                                                Vec2::splat(32.0),
+                                                5,
+                                                1,
+                                            ))
+                                        },
+                                        UniformAnim(Timer::from_seconds(0.1, true)),
+                                        DespawnTimer(Timer::from_seconds(0.5, false)),
+                                    ))
+                                    .with_children(|parent| {
+                                        parent
+                                            .spawn_bundle(SpatialBundle::default())
+                                            .insert_bundle((
+                                                Collider::ball(32.0),
+                                                CollisionGroups {
+                                                    memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                                                    filters: ENEMY_COLLISION_GROUP,
+                                                },
+                                                ActiveEvents::COLLISION_EVENTS,
+                                                Sensor,
+                                                Hitbox,
+                                                Hitstun(0.5),
+                                                RadialImpulse(75.0),
+                                                DespawnTimer(Timer::from_seconds(0.1, false)),
+                                            ));
+                                    });
+                            }
+                            (Water, Water) => {
+                                //big wave - pushes enemies in a direction away from player
+                            }
+                            (Wind, Wind) => {
+                                //Tornado - pulls towards center
+                            }
+                            (Lightning, Lightning) => {
+                                //lightning strike; big damage, small area
+                            }
+                            (Earth, Earth) => {
+                                //big rock just sprouts and blocks stuff
+                            }
+                            (Fire, Water) | (Water, Fire) => {
+                                //steam geyser - shoves away
+                            }
+                            (Fire, Wind) | (Wind, Fire) => {
+                                //sets things on fire (big area, dot)
+                            }
+                            (Fire, Lightning) | (Lightning, Fire) => {
+                                //delayed explosion, sticks to 1 enemy
+                            }
+                            (Fire, Earth) | (Earth, Fire) => {
+                                //Damaging lava puddle
+                            }
+                            (Water, Wind) | (Wind, Water) => {
+                                //homing rain cloud - slows enemies under it
+                            }
+                            (Water, Lightning) | (Lightning, Water) => {
+                                //Affected enemies shoot lightning at nearby enemies
+                            }
+                            (Water, Earth) | (Earth, Water) => {
+                                //grows vines on the ground, damaging enemies that walk through
+                            }
+                            (Wind, Lightning) | (Lightning, Wind) => {
+                                //homing storm cloud
+                            }
+                            (Wind, Earth) | (Earth, Wind) => {
+                                //dust storm - blinds
+                            }
+                            (Lightning, Earth) | (Earth, Lightning) => {
+                                //lightning strikes at location, sparks go through ground back to player
+                            }
+                        }
+                    }
                 }
                 _ => (),
             }
@@ -245,7 +337,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::throw_potion.run_in_state(GameState::InGame))
             .add_system(Self::manage_brew_state.run_in_state(GameState::InGame))
             .add_system(Self::update_brew.run_in_state(GameState::InGame))
-            .add_system(Self::read_events.run_in_state(GameState::InGame))
+            .add_system(Self::potion_explode.run_in_state(GameState::InGame))
             .init_resource::<PotionBrewData>()
             .init_resource::<PotionBrewState>()
             .add_event::<ThrowPotion>();

@@ -1,5 +1,6 @@
 mod consts;
 mod enemy;
+mod health;
 mod hitbox;
 mod level;
 mod player;
@@ -53,6 +54,7 @@ fn main() {
         .add_plugin(potion::Plugin)
         .add_plugin(enemy::Plugin)
         .add_plugin(hitbox::Plugin)
+        .add_plugin(health::Plugin)
         .add_startup_system(init)
         .run();
 }

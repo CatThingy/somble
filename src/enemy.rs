@@ -9,6 +9,7 @@ use iyes_loopless::prelude::*;
 use ordered_float::OrderedFloat;
 use pathfinding::directed::astar::astar;
 
+use crate::health::Health;
 use crate::level::WalkableTiles;
 use crate::utils::TimeScale;
 use crate::utils::UniformAnim;
@@ -28,6 +29,7 @@ pub struct ElementalBundle {
     damping: Damping,
     hitstun: HitstunTimer,
     anim: UniformAnim,
+    health: Health,
     #[bundle]
     spritesheet: SpriteSheetBundle,
 }
@@ -64,6 +66,7 @@ impl LdtkEntity for ElementalBundle {
             },
             anim: UniformAnim(Timer::from_seconds(0.1, true)),
             hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
+            health: Health::new(ELEMENTAL_HEALTH),
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),

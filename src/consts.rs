@@ -29,3 +29,4 @@ pub static POTION_SPIN_SPEED: f32 = 32.0;
 pub const GRID_SIZE: i32 = 16;
 
 pub const ELEMENTAL_SPEED: f32 = 50.0;
+pub const ELEMENTAL_HEALTH: f32 = 100.0;

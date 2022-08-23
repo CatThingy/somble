@@ -5,7 +5,8 @@ use iyes_loopless::prelude::*;
 use crate::{
     consts::*,
     hitbox::{
-        DirectedForce, DirectedImpulse, Falloff, Hitbox, Hitstun, RadialForce, RadialImpulse,
+        DamageOnce, DamagePeriodic, DirectedForce, Falloff, Hitbox, Hitstun, RadialForce,
+        RadialImpulse,
     },
     player::Player,
     utils::{
@@ -81,6 +82,7 @@ fn fire_fire(
                     Hitbox,
                     Hitstun(0.5),
                     RadialImpulse::new(25.0, Falloff::none()),
+                    DamageOnce::new(25.0, Falloff::none()),
                     DespawnTimer(Timer::from_seconds(0.1, false)),
                 ));
         });
@@ -124,8 +126,7 @@ fn water_water(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    Hitstun(0.25),
-                    DirectedForce::new(direction * 5.0),
+                    DirectedForce::new(direction * 15.0),
                     DespawnTimer(Timer::from_seconds(0.3, false)),
                 ));
         });
@@ -193,7 +194,8 @@ fn lightning_lightning(
                     Sensor,
                     Hitbox,
                     Hitstun(3.0),
-                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                    DamageOnce::new(250.0, Falloff::none()),
+                    DespawnTimer(Timer::from_seconds(0.05, false)),
                 ));
         });
 }
@@ -258,7 +260,6 @@ fn fire_water(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    Hitstun(0.1),
                     RadialForce::new(5.0, Falloff::new(0.5, 5.0, 32.0)),
                 ));
         });
@@ -270,53 +271,160 @@ fn fire_wind(
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
 }
+
 fn fire_lightning(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
 }
+
 fn fire_earth(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
+    spawned
+        // .insert_bundle((
+        //     TextureAtlasSprite::default(),
+        //     {
+        //         let tex = assets.load("fire_fire.png");
+        //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+        //     },
+        //     UniformAnim(Timer::from_seconds(0.1, true)),
+        //     DespawnTimer(Timer::from_seconds(0.5, false)),
+        // ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    DamagePeriodic::new(5.0, Falloff::none(), 0.1),
+                    DespawnTimer(Timer::from_seconds(1.5, false)),
+                ));
+        });
 }
+
 fn water_wind(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
 }
+
 fn water_lightning(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
 }
+
 fn water_earth(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
+    velocity: &Velocity,
 ) {
+    let direction = velocity.linvel.normalize();
+    spawned
+        // .insert_bundle((
+        //     TextureAtlasSprite::default(),
+        //     {
+        //         let tex = assets.load("fire_fire.png");
+        //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+        //     },
+        //     UniformAnim(Timer::from_seconds(0.1, true)),
+        //     DespawnTimer(Timer::from_seconds(0.5, false)),
+        // ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle {
+                    transform: Transform {
+                        rotation: Quat::from_axis_angle(
+                            Vec3::Z,
+                            direction.y.atan2(direction.x) + std::f32::consts::PI / 2.0,
+                        ),
+                        translation: (direction * 48.0).extend(0.0),
+                        ..default()
+                    },
+                    ..default()
+                })
+                .insert_bundle((
+                    Collider::cuboid(16.0, 48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    Hitstun(0.5),
+                    DamagePeriodic::new(5.0, Falloff::none(), 0.1),
+                    DespawnTimer(Timer::from_seconds(1.5, false)),
+                ));
+        });
 }
+
 fn wind_lightning(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
 }
+
 fn wind_earth(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
 }
+
 fn lightning_earth(
     spawned: &mut EntityCommands,
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
+    rotation: f32,
 ) {
+    //TODO: spawned just has initial strike art
+    for i in 0..7 {
+        let rotation = rotation + std::f32::consts::TAU / 7.0 * i as f32;
+        spawned.with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Velocity {
+                        linvel: Vec2::from_angle(rotation) * 600.0,
+                        angvel: 0.0,
+                    },
+                    RigidBody::Dynamic,
+                    Collider::ball(2.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Hitbox,
+                    Hitstun(1.5),
+                    DamageOnce::new(5.0, Falloff::none()),
+                    DespawnTimer(Timer::from_seconds(0.6, false)),
+                    Sprite {
+                        color: Color::WHITE,
+                        custom_size: Some(Vec2::new(10.0, 10.0)),
+                        ..default()
+                    },
+                    bevy::render::texture::DEFAULT_IMAGE_HANDLE.typed::<Image>(),
+                    LockedAxes::ROTATION_LOCKED,
+                    Ccd::enabled(),
+                ));
+        });
+    }
 }
 
 pub struct Plugin;
@@ -556,17 +664,20 @@ impl Plugin {
                 CollisionEvent::Started(e1, e2, _) => {
                     let potion_type;
                     let location;
+                    let rotation;
                     let velocity;
 
                     if let Ok((p, t, v)) = q_potion.get(*e1) {
                         cmd.entity(*e1).despawn_recursive();
                         potion_type = p;
                         location = t.translation;
+                        rotation = t.rotation.to_euler(EulerRot::XYZ).2;
                         velocity = v;
                     } else if let Ok((p, t, v)) = q_potion.get(*e2) {
                         cmd.entity(*e2).despawn_recursive();
                         potion_type = p;
                         location = t.translation;
+                        rotation = t.rotation.to_euler(EulerRot::XYZ).2;
                         velocity = v;
                     } else {
                         continue;
@@ -623,7 +734,7 @@ impl Plugin {
                                 //Affected enemies shoot lightning at nearby enemies
                             }
                             (Water, Earth) | (Earth, Water) => {
-                                water_earth(&mut spawned, &assets, &mut atlases);
+                                water_earth(&mut spawned, &assets, &mut atlases, velocity);
                                 //grows vines on the ground, damaging enemies that walk through
                             }
                             (Wind, Lightning) | (Lightning, Wind) => {
@@ -635,7 +746,7 @@ impl Plugin {
                                 //dust storm - blinds
                             }
                             (Lightning, Earth) | (Earth, Lightning) => {
-                                lightning_earth(&mut spawned, &assets, &mut atlases);
+                                lightning_earth(&mut spawned, &assets, &mut atlases, rotation);
                                 //lightning strikes at location, sparks go through ground back to player
                             }
                         }

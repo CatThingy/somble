@@ -4,7 +4,7 @@ use bevy::{prelude::*, utils::HashSet};
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::{enemy::HitstunTimer, Enemy, GameState};
+use crate::{enemy::HitstunTimer, health::HealthChange, utils::TimeScale, Enemy, GameState};
 
 #[derive(Component)]
 pub struct Hitbox;
@@ -88,6 +88,42 @@ impl DirectedForce {
     }
 }
 
+#[derive(Component, Debug)]
+pub struct DamageOnce {
+    amount: f32,
+    falloff: Falloff,
+    hit: HashSet<Entity>,
+}
+
+impl DamageOnce {
+    pub fn new(amount: f32, falloff: Falloff) -> Self {
+        DamageOnce {
+            amount,
+            falloff,
+            hit: HashSet::new(),
+        }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct DamagePeriodic {
+    amount: f32,
+    falloff: Falloff,
+    period: Timer,
+    hostages: HashSet<Entity>,
+}
+
+impl DamagePeriodic {
+    pub fn new(amount: f32, falloff: Falloff, period: f32) -> Self {
+        DamagePeriodic {
+            amount,
+            falloff,
+            period: Timer::from_seconds(period, true),
+            hostages: HashSet::new(),
+        }
+    }
+}
+
 pub struct Plugin;
 
 impl Plugin {
@@ -103,9 +139,12 @@ impl Plugin {
                 Option<&DirectedImpulse>,
                 Option<&mut RadialForce>,
                 Option<&mut DirectedForce>,
+                Option<&mut DamageOnce>,
+                Option<&mut DamagePeriodic>,
             ),
             (Without<Enemy>, With<Hitbox>),
         >,
+        mut event_writer: EventWriter<HealthChange>,
     ) {
         for event in event_reader.iter() {
             match event {
@@ -141,6 +180,8 @@ impl Plugin {
                         directed_impulse,
                         radial_force,
                         directed_force,
+                        damage_once,
+                        damage_periodic,
                     ) = hitbox_data;
 
                     if let Some(hitstun) = hitstun {
@@ -174,6 +215,23 @@ impl Plugin {
                     if let Some(mut directed_force) = directed_force {
                         directed_force.hostages.insert(*enemy_entity);
                     }
+
+                    if let Some(mut damage_once) = damage_once {
+                        if damage_once.hit.insert(*enemy_entity) {
+                            let distance = (enemy_transform.translation()
+                                - hitbox_transform.translation())
+                            .truncate()
+                            .length();
+                            event_writer.send(HealthChange {
+                                target: *enemy_entity,
+                                amount: damage_once.amount * damage_once.falloff.amount(distance),
+                            })
+                        }
+                    }
+
+                    if let Some(mut damage_periodic) = damage_periodic {
+                        damage_periodic.hostages.insert(*enemy_entity);
+                    }
                 }
                 CollisionEvent::Stopped(e1, e2, _) => {
                     let enemy_entity;
@@ -195,13 +253,17 @@ impl Plugin {
                     } else {
                         continue;
                     }
-                    let (_, _, _, _, radial_force, directed_force) = hitbox_data;
+                    let (_, _, _, _, radial_force, directed_force, _, damage_periodic) =
+                        hitbox_data;
 
                     if let Some(mut radial_force) = radial_force {
                         radial_force.hostages.remove(enemy_entity);
                     }
                     if let Some(mut directed_force) = directed_force {
                         directed_force.hostages.remove(enemy_entity);
+                    }
+                    if let Some(mut damage_periodic) = damage_periodic {
+                        damage_periodic.hostages.remove(enemy_entity);
                     }
                 }
             }
@@ -219,15 +281,19 @@ impl Plugin {
                 &GlobalTransform,
                 Option<&RadialForce>,
                 Option<&DirectedForce>,
+                Option<&mut DamagePeriodic>,
             ),
             (Without<Enemy>, With<Hitbox>),
         >,
+        mut event_writer: EventWriter<HealthChange>,
+        time: Res<Time>,
+        time_scale: Res<TimeScale>,
     ) {
-        for (origin, radial_force, directed_force) in &mut q_hitbox {
+        for (origin, radial_force, directed_force, damage_periodic) in &mut q_hitbox {
             if let Some(radial_force) = radial_force {
                 let mut iter = q_enemy.iter_many_mut(radial_force.hostages.iter());
 
-                while let Some((entity, transform, mut hitstun)) = iter.fetch_next() {
+                while let Some((entity, transform, _)) = iter.fetch_next() {
                     // hitstun.reset();
                     let force_direction =
                         (transform.translation() - origin.translation()).truncate();
@@ -243,12 +309,32 @@ impl Plugin {
             if let Some(directed_force) = directed_force {
                 let mut iter = q_enemy.iter_many_mut(directed_force.hostages.iter());
 
-                while let Some((entity, transform, mut hitstun)) = iter.fetch_next() {
+                while let Some((entity, _, _)) = iter.fetch_next() {
                     // hitstun.reset();
                     cmd.entity(entity).insert(ExternalImpulse {
                         impulse: directed_force.force,
                         torque_impulse: 0.0,
                     });
+                }
+            }
+
+            if let Some(mut damage_periodic) = damage_periodic {
+                damage_periodic
+                    .period
+                    .tick(time.delta().mul_f32(**time_scale));
+
+                if damage_periodic.period.finished() {
+                    let mut iter = q_enemy.iter_many_mut(damage_periodic.hostages.iter());
+                    while let Some((entity, transform, _)) = iter.fetch_next() {
+                        let distance = (transform.translation() - origin.translation())
+                            .truncate()
+                            .length();
+                        event_writer.send(HealthChange {
+                            target: entity,
+                            amount: damage_periodic.amount
+                                * damage_periodic.falloff.amount(distance),
+                        });
+                    }
                 }
             }
         }

@@ -6,13 +6,13 @@ use crate::{
     consts::*,
     hitbox::{
         DamageOnce, DamagePeriodic, DirectedForce, Falloff, Hitbox, Hitstun, RadialForce,
-        RadialImpulse,
+        RadialImpulse, StatusEffect,
     },
     player::Player,
     utils::{
         DespawnTimer, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale, UniformAnim,
     },
-    Element, GameState,
+    Element, GameState, status::Effect,
 };
 
 #[derive(Component)]
@@ -270,6 +270,32 @@ fn fire_wind(
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
+    spawned
+        .insert_bundle((
+            // TextureAtlasSprite::default(),
+            // {
+            //     let tex = assets.load("fire_fire.png");
+            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            // },
+            // UniformAnim(Timer::from_seconds(0.1, true)),
+            // DespawnTimer(Timer::from_seconds(0.5, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    StatusEffect(Effect::OnFire),
+                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                ));
+        });
 }
 
 fn fire_lightning(
@@ -277,6 +303,32 @@ fn fire_lightning(
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
+    spawned
+        .insert_bundle((
+            // TextureAtlasSprite::default(),
+            // {
+            //     let tex = assets.load("fire_fire.png");
+            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            // },
+            // UniformAnim(Timer::from_seconds(0.1, true)),
+            // DespawnTimer(Timer::from_seconds(0.5, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    StatusEffect(Effect::DelayedExplosion),
+                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                ));
+        });
 }
 
 fn fire_earth(
@@ -324,6 +376,32 @@ fn water_lightning(
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
+    spawned
+        .insert_bundle((
+            // TextureAtlasSprite::default(),
+            // {
+            //     let tex = assets.load("fire_fire.png");
+            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            // },
+            // UniformAnim(Timer::from_seconds(0.1, true)),
+            // DespawnTimer(Timer::from_seconds(0.5, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    StatusEffect(Effect::Shocked),
+                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                ));
+        });
 }
 
 fn water_earth(
@@ -384,6 +462,32 @@ fn wind_earth(
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
+    spawned
+        .insert_bundle((
+            // TextureAtlasSprite::default(),
+            // {
+            //     let tex = assets.load("fire_fire.png");
+            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+            // },
+            // UniformAnim(Timer::from_seconds(0.1, true)),
+            // DespawnTimer(Timer::from_seconds(0.5, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    StatusEffect(Effect::Blinded),
+                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                ));
+        });
 }
 
 fn lightning_earth(

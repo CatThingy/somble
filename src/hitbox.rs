@@ -4,7 +4,9 @@ use bevy::{prelude::*, utils::HashSet};
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::{enemy::HitstunTimer, health::HealthChange, utils::TimeScale, Enemy, GameState};
+use crate::{
+    enemy::HitstunTimer, health::HealthChange, status::Effect, utils::TimeScale, Enemy, GameState,
+};
 
 #[derive(Component)]
 pub struct Hitbox;
@@ -124,6 +126,9 @@ impl DamagePeriodic {
     }
 }
 
+#[derive(Component, Deref)]
+pub struct StatusEffect(pub Effect);
+
 pub struct Plugin;
 
 impl Plugin {
@@ -141,6 +146,7 @@ impl Plugin {
                 Option<&mut DirectedForce>,
                 Option<&mut DamageOnce>,
                 Option<&mut DamagePeriodic>,
+                Option<&StatusEffect>,
             ),
             (Without<Enemy>, With<Hitbox>),
         >,
@@ -182,6 +188,7 @@ impl Plugin {
                         directed_force,
                         damage_once,
                         damage_periodic,
+                        status_effect,
                     ) = hitbox_data;
 
                     if let Some(hitstun) = hitstun {
@@ -232,6 +239,10 @@ impl Plugin {
                     if let Some(mut damage_periodic) = damage_periodic {
                         damage_periodic.hostages.insert(*enemy_entity);
                     }
+
+                    if let Some(status_effect) = status_effect {
+                        cmd.entity(*enemy_entity).insert(status_effect.0.clone());
+                    }
                 }
                 CollisionEvent::Stopped(e1, e2, _) => {
                     let enemy_entity;
@@ -253,7 +264,7 @@ impl Plugin {
                     } else {
                         continue;
                     }
-                    let (_, _, _, _, radial_force, directed_force, _, damage_periodic) =
+                    let (_, _, _, _, radial_force, directed_force, _, damage_periodic, _) =
                         hitbox_data;
 
                     if let Some(mut radial_force) = radial_force {

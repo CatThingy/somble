@@ -5,6 +5,7 @@ mod hitbox;
 mod level;
 mod player;
 mod potion;
+mod status;
 mod utils;
 
 use bevy::{prelude::*, render::texture::ImageSettings};
@@ -55,6 +56,7 @@ fn main() {
         .add_plugin(enemy::Plugin)
         .add_plugin(hitbox::Plugin)
         .add_plugin(health::Plugin)
+        .add_plugin(status::Plugin)
         .add_startup_system(init)
         .run();
 }

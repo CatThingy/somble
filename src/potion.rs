@@ -8,11 +8,13 @@ use crate::{
         DamageOnce, DamagePeriodic, DirectedForce, Falloff, Hitbox, Hitstun, RadialForce,
         RadialImpulse, StatusEffect,
     },
+    homing::Homing,
     player::Player,
+    status::Effect,
     utils::{
         DespawnTimer, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale, UniformAnim,
     },
-    Element, GameState, status::Effect,
+    Element, GameState,
 };
 
 #[derive(Component)]
@@ -369,6 +371,35 @@ fn water_wind(
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
+    spawned
+        .insert_bundle((
+            Velocity::default(),
+            RigidBody::KinematicVelocityBased,
+            Homing { max_speed: 10.0 },
+            Sensor,
+            Collider::ball(128.0),
+            ActiveEvents::COLLISION_EVENTS,
+            CollisionGroups {
+                memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                filters: ENEMY_COLLISION_GROUP,
+            },
+            DespawnTimer(Timer::from_seconds(3.0, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    StatusEffect(Effect::Slowed),
+                ));
+        });
 }
 
 fn water_lightning(
@@ -455,6 +486,35 @@ fn wind_lightning(
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
+    spawned
+        .insert_bundle((
+            Velocity::default(),
+            RigidBody::KinematicVelocityBased,
+            Homing { max_speed: 10.0 },
+            Sensor,
+            Collider::ball(128.0),
+            ActiveEvents::COLLISION_EVENTS,
+            CollisionGroups {
+                memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                filters: ENEMY_COLLISION_GROUP,
+            },
+            DespawnTimer(Timer::from_seconds(3.0, false)),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(SpatialBundle::default())
+                .insert_bundle((
+                    Collider::ball(48.0),
+                    CollisionGroups {
+                        memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                        filters: ENEMY_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
+                    Hitbox,
+                    StatusEffect(Effect::Shocked),
+                ));
+        });
 }
 
 fn wind_earth(

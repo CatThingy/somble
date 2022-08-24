@@ -7,6 +7,7 @@ mod player;
 mod potion;
 mod status;
 mod utils;
+mod homing;
 
 use bevy::{prelude::*, render::texture::ImageSettings};
 
@@ -57,6 +58,7 @@ fn main() {
         .add_plugin(hitbox::Plugin)
         .add_plugin(health::Plugin)
         .add_plugin(status::Plugin)
+        .add_plugin(homing::Plugin)
         .add_startup_system(init)
         .run();
 }

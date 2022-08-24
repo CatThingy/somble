@@ -1,7 +1,18 @@
 use bevy::prelude::*;
+
+use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::{health::HealthChange, utils::TimeScale, GameState};
+use crate::consts::*;
+use crate::health::Dead;
+use crate::hitbox::Hitbox;
+use crate::utils::DespawnTimer;
+use crate::{
+    health::HealthChange,
+    hitbox::{DamageOnce, Falloff},
+    utils::TimeScale,
+    GameState,
+};
 
 #[derive(Component)]
 pub struct OnFire {
@@ -135,21 +146,29 @@ impl Plugin {
 
     fn tick_shocked(
         mut cmd: Commands,
-        mut q_shocked: Query<(Entity, &mut Shocked)>,
+        mut q_shocked: Query<(Entity, &GlobalTransform, &mut Shocked)>,
         time: Res<Time>,
         time_scale: Res<TimeScale>,
-        mut event_writer: EventWriter<HealthChange>,
     ) {
         let delta = time.delta().mul_f32(**time_scale);
-        for (entity, mut shocked) in &mut q_shocked {
+        for (entity, transform, mut shocked) in &mut q_shocked {
             shocked.duration.tick(delta);
             shocked.tick.tick(delta);
 
             if shocked.tick.finished() {
-                event_writer.send(HealthChange {
-                    target: entity,
-                    amount: 10.0,
-                });
+                cmd.spawn_bundle(SpatialBundle::from_transform(transform.compute_transform()))
+                    .insert_bundle((
+                        Collider::ball(24.0),
+                        CollisionGroups {
+                            memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                            filters: ENEMY_COLLISION_GROUP,
+                        },
+                        ActiveEvents::COLLISION_EVENTS,
+                        Sensor,
+                        Hitbox,
+                        DamageOnce::new(10.0, Falloff::none()),
+                        DespawnTimer(Timer::from_seconds(0.05, false)),
+                    ));
             }
 
             if shocked.duration.finished() {
@@ -160,15 +179,33 @@ impl Plugin {
 
     fn tick_delayed_explosion(
         mut cmd: Commands,
-        mut q_delayed_explosion: Query<(Entity, &mut DelayedExplosion)>,
+        mut q_delayed_explosion: Query<(
+            Entity,
+            &GlobalTransform,
+            &mut DelayedExplosion,
+            Option<&Dead>,
+        )>,
         time: Res<Time>,
         time_scale: Res<TimeScale>,
     ) {
         let delta = time.delta().mul_f32(**time_scale);
-        for (entity, mut delayed_explosion) in &mut q_delayed_explosion {
+        for (entity, transform, mut delayed_explosion, dead) in &mut q_delayed_explosion {
             delayed_explosion.duration.tick(delta);
-            if delayed_explosion.duration.finished() {
+            if delayed_explosion.duration.finished() || dead.is_some() {
                 cmd.entity(entity).remove::<DelayedExplosion>();
+                cmd.spawn_bundle(SpatialBundle::from_transform(transform.compute_transform()))
+                    .insert_bundle((
+                        Collider::ball(24.0),
+                        CollisionGroups {
+                            memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                            filters: ENEMY_COLLISION_GROUP,
+                        },
+                        ActiveEvents::COLLISION_EVENTS,
+                        Sensor,
+                        Hitbox,
+                        DamageOnce::new(60.0, Falloff::none()),
+                        DespawnTimer(Timer::from_seconds(0.05, false)),
+                    ));
             }
         }
     }

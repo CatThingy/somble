@@ -317,7 +317,7 @@ fn fire_lightning(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(48.0),
+                    Collider::ball(2.0),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,

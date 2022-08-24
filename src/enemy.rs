@@ -11,6 +11,8 @@ use pathfinding::directed::astar::astar;
 
 use crate::health::Health;
 use crate::level::WalkableTiles;
+use crate::status::Blinded;
+use crate::status::Slowed;
 use crate::utils::TimeScale;
 use crate::utils::UniformAnim;
 use crate::{consts::*, player::Player, Enemy, GameState};
@@ -92,6 +94,8 @@ impl Plugin {
                 &HitstunTimer,
                 &mut TextureAtlasSprite,
                 &Collider,
+                Option<&Slowed>,
+                Option<&Blinded>,
             ),
             (With<Enemy>, Without<Player>),
         >,
@@ -116,18 +120,24 @@ impl Plugin {
             ..default()
         };
 
-        for (transform, mut vel, hitstun, mut sprite, collider) in &mut q_enemy {
+        for (transform, mut vel, hitstun, mut sprite, collider, slowed, blinded) in &mut q_enemy {
             if !hitstun.finished() {
                 continue;
             }
             let pos = transform.translation.truncate();
             let direction = player_pos - pos;
+
+            let speed = ELEMENTAL_SPEED
+                * match slowed {
+                    Some(_) => 0.7,
+                    None => 1.0,
+                };
             if let Some((hit, _)) =
                 rapier_ctx.cast_shape(pos, 0.0, direction, collider, f32::MAX, sight_filter)
             {
                 if hit == player {
-                    vel.linvel = direction.normalize() * ELEMENTAL_SPEED;
-                } else {
+                    vel.linvel = direction.normalize() * speed;
+                } else if blinded.is_none() {
                     let enemy_tile_pos: IVec2 =
                         translation_to_grid_coords(pos, IVec2::splat(GRID_SIZE)).into();
                     if let Some((path, _)) = astar(
@@ -177,7 +187,7 @@ impl Plugin {
                         |&node| player_tile_pos == node,
                     ) {
                         if path.len() <= 1 {
-                            vel.linvel = direction.normalize() * ELEMENTAL_SPEED;
+                            vel.linvel = direction.normalize() * speed;
                         } else {
                             let mut path = path.iter().map(|v| {
                                 grid_coords_to_translation_centered(
@@ -196,7 +206,7 @@ impl Plugin {
 
                             let direction = target - pos;
 
-                            vel.linvel = direction.normalize_or_zero() * ELEMENTAL_SPEED;
+                            vel.linvel = direction.normalize_or_zero() * speed;
                         }
                     }
                 }
@@ -208,7 +218,7 @@ impl Plugin {
     fn tick_hitstun(
         mut q_enemy: Query<(&mut HitstunTimer, &mut UniformAnim), With<Enemy>>,
         time: Res<Time>,
-        time_scale: Res<TimeScale>
+        time_scale: Res<TimeScale>,
     ) {
         for (mut timer, mut anim) in &mut q_enemy {
             timer.tick(time.delta().mul_f32(**time_scale));

@@ -74,7 +74,7 @@ fn fire_fire(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(32.0),
+                    Collider::ball(FIRE_FIRE_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -82,9 +82,9 @@ fn fire_fire(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    Hitstun(0.5),
-                    RadialImpulse::new(25.0, Falloff::none()),
-                    DamageOnce::new(25.0, Falloff::none()),
+                    Hitstun(FIRE_FIRE_HITSTUN),
+                    RadialImpulse::new(FIRE_FIRE_IMPULSE, Falloff::none()),
+                    DamageOnce::new(FIRE_FIRE_DAMAGE, Falloff::none()),
                     DespawnTimer(Timer::from_seconds(0.1, false)),
                 ));
         });
@@ -101,11 +101,11 @@ fn water_water(
     spawned
         .insert_bundle((
             Velocity {
-                linvel: direction * 100.0,
+                linvel: direction * WATER_WATER_SPEED,
                 angvel: 0.0,
             },
             RigidBody::KinematicVelocityBased,
-            DespawnTimer(Timer::from_seconds(0.6, false)),
+            DespawnTimer(Timer::from_seconds(WATER_WATER_DURATION, false)),
         ))
         .with_children(|parent| {
             parent
@@ -120,7 +120,7 @@ fn water_water(
                     ..default()
                 })
                 .insert_bundle((
-                    Collider::cuboid(32.0, 8.0),
+                    Collider::cuboid(WATER_WATER_HALF_WIDTH, WATER_WATER_HALF_HEIGHT),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -128,8 +128,7 @@ fn water_water(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    DirectedForce::new(direction * 15.0),
-                    DespawnTimer(Timer::from_seconds(0.3, false)),
+                    DirectedForce::new(direction * WATER_WATER_FORCE),
                 ));
         });
 }
@@ -148,13 +147,13 @@ fn wind_wind(
             //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
             //     },
             //     UniformAnim(Timer::from_seconds(0.1, true)),
-            DespawnTimer(Timer::from_seconds(2.0, false)),
+            DespawnTimer(Timer::from_seconds(WIND_WIND_DURATION, false)),
         ))
         .with_children(|parent| {
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(32.0),
+                    Collider::ball(WIND_WIND_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -162,8 +161,14 @@ fn wind_wind(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    Hitstun(0.1),
-                    RadialForce::new(-5.0, Falloff::new(0.5, 5.0, 32.0)),
+                    RadialForce::new(
+                        -WIND_WIND_FORCE,
+                        Falloff::new(
+                            WIND_WIND_MAX_FALLOFF,
+                            WIND_WIND_FALLOFF_START,
+                            WIND_WIND_FALLOFF_END,
+                        ),
+                    ),
                 ));
         });
 }
@@ -187,7 +192,7 @@ fn lightning_lightning(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(2.0),
+                    Collider::ball(LIGHTNING_LIGHTNING_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -195,8 +200,8 @@ fn lightning_lightning(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    Hitstun(3.0),
-                    DamageOnce::new(250.0, Falloff::none()),
+                    Hitstun(LIGHTNING_LIGHTNING_HITSTUN),
+                    DamageOnce::new(LIGHTNING_LIGHTNING_DAMAGE, Falloff::none()),
                     DespawnTimer(Timer::from_seconds(0.05, false)),
                 ));
         });
@@ -221,7 +226,7 @@ fn earth_earth(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(16.0),
+                    Collider::ball(EARTH_EARTH_RADIUS),
                     CollisionGroups {
                         memberships: WALL_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP
@@ -229,7 +234,7 @@ fn earth_earth(
                             | PLAYER_ATTACK_COLLISION_GROUP
                             | ENEMY_ATTACK_COLLISION_GROUP,
                     },
-                    DespawnTimer(Timer::from_seconds(2.0, false)),
+                    DespawnTimer(Timer::from_seconds(EARTH_EARTH_DURATION, false)),
                 ));
         });
 }
@@ -248,13 +253,13 @@ fn fire_water(
             //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
             //     },
             //     UniformAnim(Timer::from_seconds(0.1, true)),
-            DespawnTimer(Timer::from_seconds(2.0, false)),
+            DespawnTimer(Timer::from_seconds(FIRE_WATER_DURATION, false)),
         ))
         .with_children(|parent| {
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(32.0),
+                    Collider::ball(FIRE_WATER_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -262,7 +267,14 @@ fn fire_water(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    RadialForce::new(5.0, Falloff::new(0.5, 5.0, 32.0)),
+                    RadialForce::new(
+                        FIRE_WATER_FORCE,
+                        Falloff::new(
+                            FIRE_WATER_MAX_FALLOFF,
+                            FIRE_WATER_FALLOFF_START,
+                            FIRE_WATER_FALLOFF_END,
+                        ),
+                    ),
                 ));
         });
 }
@@ -286,7 +298,7 @@ fn fire_wind(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(48.0),
+                    Collider::ball(FIRE_WIND_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -295,7 +307,7 @@ fn fire_wind(
                     Sensor,
                     Hitbox,
                     StatusEffect(Effect::OnFire),
-                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                    DespawnTimer(Timer::from_seconds(FIRE_WIND_DURATION, false)),
                 ));
         });
 }
@@ -319,7 +331,7 @@ fn fire_lightning(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(2.0),
+                    Collider::ball(FIRE_LIGHTNING_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -328,7 +340,7 @@ fn fire_lightning(
                     Sensor,
                     Hitbox,
                     StatusEffect(Effect::DelayedExplosion),
-                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                    DespawnTimer(Timer::from_seconds(FIRE_LIGHTNING_DURATION, false)),
                 ));
         });
 }
@@ -352,7 +364,7 @@ fn fire_earth(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(48.0),
+                    Collider::ball(FIRE_EARTH_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -360,8 +372,8 @@ fn fire_earth(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    DamagePeriodic::new(5.0, Falloff::none(), 0.1),
-                    DespawnTimer(Timer::from_seconds(1.5, false)),
+                    DamagePeriodic::new(FIRE_EARTH_DAMAGE, Falloff::none(), FIRE_EARTH_TICK),
+                    DespawnTimer(Timer::from_seconds(FIRE_EARTH_DURATION, false)),
                 ));
         });
 }
@@ -375,21 +387,23 @@ fn water_wind(
         .insert_bundle((
             Velocity::default(),
             RigidBody::KinematicVelocityBased,
-            Homing { max_speed: 10.0 },
+            Homing {
+                max_speed: WATER_WIND_CHASE_SPEED,
+            },
             Sensor,
-            Collider::ball(128.0),
+            Collider::ball(WATER_WIND_CHASE_RADIUS),
             ActiveEvents::COLLISION_EVENTS,
             CollisionGroups {
                 memberships: PLAYER_ATTACK_COLLISION_GROUP,
                 filters: ENEMY_COLLISION_GROUP,
             },
-            DespawnTimer(Timer::from_seconds(3.0, false)),
+            DespawnTimer(Timer::from_seconds(WATER_WIND_DURATION, false)),
         ))
         .with_children(|parent| {
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(48.0),
+                    Collider::ball(WATER_WIND_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -421,7 +435,7 @@ fn water_lightning(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(48.0),
+                    Collider::ball(WATER_LIGHTNING_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -430,7 +444,7 @@ fn water_lightning(
                     Sensor,
                     Hitbox,
                     StatusEffect(Effect::Shocked),
-                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                    DespawnTimer(Timer::from_seconds(WATER_LIGHTNING_DURATION, false)),
                 ));
         });
 }
@@ -460,13 +474,13 @@ fn water_earth(
                             Vec3::Z,
                             direction.y.atan2(direction.x) + std::f32::consts::PI / 2.0,
                         ),
-                        translation: (direction * 48.0).extend(0.0),
+                        translation: (direction * WATER_EARTH_HALF_HEIGHT).extend(0.0),
                         ..default()
                     },
                     ..default()
                 })
                 .insert_bundle((
-                    Collider::cuboid(16.0, 48.0),
+                    Collider::cuboid(WATER_EARTH_HALF_WIDTH, WATER_EARTH_HALF_HEIGHT),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -474,9 +488,9 @@ fn water_earth(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    Hitstun(0.5),
-                    DamagePeriodic::new(5.0, Falloff::none(), 0.1),
-                    DespawnTimer(Timer::from_seconds(1.5, false)),
+                    Hitstun(WATER_EARTH_HITSTUN),
+                    DamagePeriodic::new(WATER_EARTH_DAMAGE, Falloff::none(), WATER_EARTH_TICK),
+                    DespawnTimer(Timer::from_seconds(WATER_EARTH_DURATION, false)),
                 ));
         });
 }
@@ -490,21 +504,23 @@ fn wind_lightning(
         .insert_bundle((
             Velocity::default(),
             RigidBody::KinematicVelocityBased,
-            Homing { max_speed: 10.0 },
+            Homing {
+                max_speed: WIND_LIGHTNING_CHASE_SPEED,
+            },
             Sensor,
-            Collider::ball(128.0),
+            Collider::ball(WIND_LIGHTNING_CHASE_RADIUS),
             ActiveEvents::COLLISION_EVENTS,
             CollisionGroups {
                 memberships: PLAYER_ATTACK_COLLISION_GROUP,
                 filters: ENEMY_COLLISION_GROUP,
             },
-            DespawnTimer(Timer::from_seconds(3.0, false)),
+            DespawnTimer(Timer::from_seconds(WIND_LIGHTNING_DURATION, false)),
         ))
         .with_children(|parent| {
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(48.0),
+                    Collider::ball(WIND_LIGHTNING_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -536,7 +552,7 @@ fn wind_earth(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
-                    Collider::ball(48.0),
+                    Collider::ball(WIND_EARTH_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP,
@@ -545,7 +561,7 @@ fn wind_earth(
                     Sensor,
                     Hitbox,
                     StatusEffect(Effect::Blinded),
-                    DespawnTimer(Timer::from_seconds(0.1, false)),
+                    DespawnTimer(Timer::from_seconds(WIND_EARTH_DURATION, false)),
                 ));
         });
 }
@@ -557,33 +573,27 @@ fn lightning_earth(
     rotation: f32,
 ) {
     //TODO: spawned just has initial strike art
-    for i in 0..7 {
-        let rotation = rotation + std::f32::consts::TAU / 7.0 * i as f32;
+    for i in 0..LIGHTNING_EARTH_COUNT {
+        let rotation = rotation + (std::f32::consts::TAU / LIGHTNING_EARTH_COUNT as f32) * i as f32;
         spawned.with_children(|parent| {
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
                     Velocity {
-                        linvel: Vec2::from_angle(rotation) * 600.0,
+                        linvel: Vec2::from_angle(rotation) * LIGHTNING_EARTH_SPEED,
                         angvel: 0.0,
                     },
                     RigidBody::Dynamic,
-                    Collider::ball(2.0),
+                    Collider::ball(LIGHTNING_EARTH_RADIUS),
                     CollisionGroups {
                         memberships: PLAYER_ATTACK_COLLISION_GROUP,
                         filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP,
                     },
                     ActiveEvents::COLLISION_EVENTS,
                     Hitbox,
-                    Hitstun(1.5),
-                    DamageOnce::new(5.0, Falloff::none()),
-                    DespawnTimer(Timer::from_seconds(0.6, false)),
-                    Sprite {
-                        color: Color::WHITE,
-                        custom_size: Some(Vec2::new(10.0, 10.0)),
-                        ..default()
-                    },
-                    bevy::render::texture::DEFAULT_IMAGE_HANDLE.typed::<Image>(),
+                    Hitstun(LIGHTNING_EARTH_HITSTUN),
+                    DamageOnce::new(LIGHTNING_EARTH_DAMAGE, Falloff::none()),
+                    DespawnTimer(Timer::from_seconds(LIGHTNING_EARTH_DURATION, false)),
                     LockedAxes::ROTATION_LOCKED,
                     Ccd::enabled(),
                 ));

@@ -2,12 +2,12 @@ mod consts;
 mod enemy;
 mod health;
 mod hitbox;
+mod homing;
 mod level;
 mod player;
 mod potion;
 mod status;
 mod utils;
-mod homing;
 
 use bevy::{prelude::*, render::texture::ImageSettings};
 

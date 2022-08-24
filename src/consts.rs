@@ -30,3 +30,76 @@ pub const GRID_SIZE: i32 = 16;
 
 pub const ELEMENTAL_SPEED: f32 = 50.0;
 pub const ELEMENTAL_HEALTH: f32 = 100.0;
+
+pub const FIRE_FIRE_RADIUS: f32 = 32.0;
+pub const FIRE_FIRE_IMPULSE: f32 = 25.0;
+pub const FIRE_FIRE_DAMAGE: f32 = 25.0;
+pub const FIRE_FIRE_HITSTUN: f32 = 0.5;
+
+pub const WATER_WATER_SPEED: f32 = 100.0;
+pub const WATER_WATER_DURATION: f32 = 0.6;
+pub const WATER_WATER_HALF_WIDTH: f32 = 32.0;
+pub const WATER_WATER_HALF_HEIGHT: f32 = 8.0;
+pub const WATER_WATER_FORCE: f32 = 15.0;
+
+pub const WIND_WIND_DURATION: f32 = 2.0;
+pub const WIND_WIND_RADIUS: f32 = 32.0;
+pub const WIND_WIND_FORCE: f32 = 5.0;
+pub const WIND_WIND_MAX_FALLOFF: f32 = 0.5;
+pub const WIND_WIND_FALLOFF_START: f32 = 5.0;
+pub const WIND_WIND_FALLOFF_END: f32 = 32.0;
+
+pub const LIGHTNING_LIGHTNING_RADIUS: f32 = 2.0;
+pub const LIGHTNING_LIGHTNING_HITSTUN: f32 = 3.0;
+pub const LIGHTNING_LIGHTNING_DAMAGE: f32 = 250.0;
+
+pub const EARTH_EARTH_RADIUS: f32 = 16.0;
+pub const EARTH_EARTH_DURATION: f32 = 2.0;
+
+pub const FIRE_WATER_DURATION: f32 = 2.0;
+pub const FIRE_WATER_RADIUS: f32 = 32.0;
+pub const FIRE_WATER_FORCE: f32 = 5.0;
+pub const FIRE_WATER_MAX_FALLOFF: f32 = 0.5;
+pub const FIRE_WATER_FALLOFF_START: f32 = 5.0;
+pub const FIRE_WATER_FALLOFF_END: f32 = 32.0;
+
+pub const FIRE_WIND_RADIUS: f32 = 48.0;
+pub const FIRE_WIND_DURATION: f32 = 0.1;
+
+pub const FIRE_LIGHTNING_RADIUS: f32 = 2.0;
+pub const FIRE_LIGHTNING_DURATION: f32 = 0.1;
+
+pub const FIRE_EARTH_RADIUS: f32 = 48.0;
+pub const FIRE_EARTH_DAMAGE: f32 = 5.0;
+pub const FIRE_EARTH_TICK: f32 = 0.1;
+pub const FIRE_EARTH_DURATION: f32 = 1.5;
+
+pub const WATER_WIND_CHASE_SPEED: f32 = 10.0;
+pub const WATER_WIND_CHASE_RADIUS: f32 = 128.0;
+pub const WATER_WIND_DURATION: f32 = 3.0;
+pub const WATER_WIND_RADIUS: f32 = 48.0;
+
+pub const WATER_LIGHTNING_RADIUS: f32 = 48.0;
+pub const WATER_LIGHTNING_DURATION: f32 = 0.1;
+
+pub const WATER_EARTH_HALF_WIDTH: f32 = 16.0;
+pub const WATER_EARTH_HALF_HEIGHT: f32 = 48.0;
+pub const WATER_EARTH_HITSTUN: f32 = 0.5;
+pub const WATER_EARTH_DAMAGE: f32 = 5.0;
+pub const WATER_EARTH_TICK: f32 = 0.1;
+pub const WATER_EARTH_DURATION: f32 = 1.5;
+
+pub const WIND_LIGHTNING_CHASE_SPEED: f32 = 10.0;
+pub const WIND_LIGHTNING_CHASE_RADIUS: f32 = 128.0;
+pub const WIND_LIGHTNING_DURATION: f32 = 3.0;
+pub const WIND_LIGHTNING_RADIUS: f32 = 48.0;
+
+pub const WIND_EARTH_RADIUS: f32 = 48.0;
+pub const WIND_EARTH_DURATION: f32 = 0.1;
+
+pub const LIGHTNING_EARTH_COUNT: u32 = 7;
+pub const LIGHTNING_EARTH_RADIUS: f32 = 2.0;
+pub const LIGHTNING_EARTH_SPEED: f32 = 600.0;
+pub const LIGHTNING_EARTH_HITSTUN: f32 = 1.5;
+pub const LIGHTNING_EARTH_DAMAGE: f32 = 0.0;
+pub const LIGHTNING_EARTH_DURATION: f32 = 0.0;

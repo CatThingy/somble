@@ -20,6 +20,16 @@ use crate::{consts::*, player::Player, Enemy, GameState};
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct HitstunTimer(pub Timer);
 
+#[derive(Component, Deref, DerefMut, Debug)]
+pub struct AttackTimer(Timer);
+
+#[derive(Component, PartialEq)]
+pub enum EnemyState {
+    Idle,
+    Chase,
+    Attack,
+}
+
 #[derive(Bundle)]
 pub struct ElementalBundle {
     enemy: Enemy,
@@ -32,6 +42,7 @@ pub struct ElementalBundle {
     hitstun: HitstunTimer,
     anim: UniformAnim,
     health: Health,
+    state: EnemyState,
     #[bundle]
     spritesheet: SpriteSheetBundle,
 }
@@ -69,6 +80,7 @@ impl LdtkEntity for ElementalBundle {
             anim: UniformAnim(Timer::from_seconds(0.1, true)),
             hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
             health: Health::new(ELEMENTAL_HEALTH),
+            state: EnemyState::Idle,
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
@@ -86,6 +98,57 @@ impl LdtkEntity for ElementalBundle {
 pub struct Plugin;
 
 impl Plugin {
+    fn update_state(
+        mut q_enemy: Query<
+            (&Transform, &mut EnemyState, &TextureAtlasSprite),
+            (With<Enemy>, Without<Player>),
+        >,
+        rapier_ctx: Res<RapierContext>,
+        q_player: Query<(Entity, &Transform), (Without<Enemy>, With<Player>)>,
+    ) {
+        let (player, player_transform) = match q_player.get_single() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        let player_pos = player_transform.translation.truncate();
+
+        for (enemy_transform, mut enemy_state, sprite) in &mut q_enemy {
+            let enemy_pos = enemy_transform.translation.truncate();
+            let direction = player_pos - enemy_pos;
+            let distance = direction.length();
+            match *enemy_state {
+                EnemyState::Idle => {
+                    if distance < ELEMENTAL_AGGRO_RANGE {
+                        *enemy_state = EnemyState::Chase;
+                    }
+                }
+                EnemyState::Chase => {
+                    let sight_filter = QueryFilter {
+                        groups: Some(InteractionGroups {
+                            memberships: ENEMY_COLLISION_GROUP,
+                            filter: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                        }),
+                        ..default()
+                    };
+
+                    if distance > ELEMENTAL_FORGET_RANGE {
+                        *enemy_state = EnemyState::Idle;
+                    } else if matches!(
+                        rapier_ctx.cast_ray(enemy_pos, direction, f32::MAX, true, sight_filter),
+                        Some((hit, _)) if hit == player,
+                    ) && distance < ELEMENTAL_ATTACK_RANGE
+                    {
+                        *enemy_state = EnemyState::Attack;
+                    }
+                }
+                EnemyState::Attack => {
+                    if sprite.index == ELEMENTAL_ATTACK_ANIM_OFFSET + ELEMENTAL_ATTACK_ANIM_FRAMES {
+                        *enemy_state = EnemyState::Chase;
+                    }
+                }
+            }
+        }
+    }
     fn movement(
         mut q_enemy: Query<
             (
@@ -94,6 +157,7 @@ impl Plugin {
                 &HitstunTimer,
                 &mut TextureAtlasSprite,
                 &Collider,
+                &EnemyState,
                 Option<&Slowed>,
                 Option<&Blinded>,
             ),
@@ -120,8 +184,10 @@ impl Plugin {
             ..default()
         };
 
-        for (transform, mut vel, hitstun, mut sprite, collider, slowed, blinded) in &mut q_enemy {
-            if !hitstun.finished() {
+        for (transform, mut vel, hitstun, mut sprite, collider, state, slowed, blinded) in
+            &mut q_enemy
+        {
+            if !hitstun.finished() || state != &EnemyState::Chase {
                 continue;
             }
             let pos = transform.translation.truncate();
@@ -235,6 +301,7 @@ impl Plugin {
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_system(Self::tick_hitstun.run_in_state(GameState::InGame))
+            .add_system(Self::update_state.run_in_state(GameState::InGame))
             .add_system(Self::movement.run_in_state(GameState::InGame))
             .register_ldtk_entity::<ElementalBundle>("Elemental");
     }

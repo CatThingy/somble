@@ -829,7 +829,6 @@ impl Plugin {
         mut cmd: Commands,
         mut event_reader: EventReader<CollisionEvent>,
         q_potion: Query<(&PotionType, &Transform, &Velocity)>,
-        q_player: Query<&Transform, With<Player>>,
         assets: Res<AssetServer>,
         mut atlases: ResMut<Assets<TextureAtlas>>,
     ) {

@@ -1,5 +1,6 @@
 mod consts;
 mod enemy;
+mod essence;
 mod health;
 mod hitbox;
 mod homing;
@@ -28,7 +29,7 @@ pub enum GameState {
     InGame,
 }
 
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Element {
     Fire,
     Water,
@@ -59,6 +60,7 @@ fn main() {
         .add_plugin(health::Plugin)
         .add_plugin(status::Plugin)
         .add_plugin(homing::Plugin)
+        .add_plugin(essence::Plugin)
         .add_startup_system(init)
         .run();
 }

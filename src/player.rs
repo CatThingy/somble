@@ -6,9 +6,10 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::enemy::HitstunTimer;
+use crate::essence::Essence;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
 use crate::utils::{MousePosition, TimeScale};
-use crate::{consts::*, Enemy, GameState};
+use crate::{consts::*, Element, Enemy, GameState};
 
 #[derive(Component)]
 pub struct Player;
@@ -73,7 +74,7 @@ impl LdtkEntity for PlayerBundle {
             },
             collision_group: CollisionGroups {
                 memberships: PLAYER_COLLISION_GROUP,
-                filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ESSENCE_COLLISION_GROUP,
             },
             locked: LockedAxes::ROTATION_LOCKED,
         }
@@ -281,14 +282,19 @@ impl Plugin {
     fn handle_kick(
         mut cmd: Commands,
         mut event_reader: EventReader<Kicked>,
-        mut q_enemy: Query<&mut HitstunTimer, With<Enemy>>,
+        mut q_enemy: Query<(&Element, &GlobalTransform, &mut HitstunTimer), With<Enemy>>,
     ) {
         for event in event_reader.iter() {
-            if let Ok(mut hitstun_timer) = q_enemy.get_mut(event.target) {
+            if let Ok((element, transform, mut hitstun_timer)) = q_enemy.get_mut(event.target) {
                 cmd.entity(event.target).insert(ExternalImpulse {
                     impulse: event.direction * PLAYER_KICK_FORCE,
                     torque_impulse: 0.0,
                 });
+                cmd.spawn_bundle(SpatialBundle {
+                    transform: transform.compute_transform(),
+                    ..default()
+                })
+                .insert_bundle((*element, Essence));
                 hitstun_timer.set_duration(Duration::from_secs_f32(PLAYER_KICK_HITSTUN_SECS));
                 hitstun_timer.reset();
             }

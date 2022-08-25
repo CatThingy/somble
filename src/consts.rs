@@ -3,6 +3,7 @@ pub const ENEMY_COLLISION_GROUP: u32 = 1 << 1;
 pub const WALL_COLLISION_GROUP: u32 = 1 << 2;
 pub const PLAYER_ATTACK_COLLISION_GROUP: u32 = 1 << 3;
 pub const ENEMY_ATTACK_COLLISION_GROUP: u32 = 1 << 4;
+pub const ESSENCE_COLLISION_GROUP: u32 = 1 << 5;
 
 pub const PLAYER_SPEED: f32 = 200.0;
 pub const PLAYER_KICK_RANGE: f32 = 16.0;

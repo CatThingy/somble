@@ -23,7 +23,10 @@ pub struct HitstunTimer(pub Timer);
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct AttackTimer(Timer);
 
-#[derive(Component, PartialEq)]
+#[derive(Component, Deref, DerefMut)]
+struct AnimationTimer(Timer);
+
+#[derive(Component, PartialEq, Debug)]
 pub enum EnemyState {
     Idle,
     Chase,
@@ -40,9 +43,10 @@ pub struct ElementalBundle {
     locked: LockedAxes,
     damping: Damping,
     hitstun: HitstunTimer,
-    anim: UniformAnim,
+    anim: AnimationTimer,
     health: Health,
     state: EnemyState,
+    attack_timer: AttackTimer,
     #[bundle]
     spritesheet: SpriteSheetBundle,
 }
@@ -58,7 +62,7 @@ impl LdtkEntity for ElementalBundle {
     ) -> Self {
         let elemental_texture = asset_server.load("elemental.png");
         let elemental_atlas =
-            TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 3, 1);
+            TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 10, 1);
         let texture_atlas = texture_atlases.add(elemental_atlas);
         ElementalBundle {
             enemy: Enemy,
@@ -77,10 +81,11 @@ impl LdtkEntity for ElementalBundle {
                 linear_damping: 20.0,
                 angular_damping: 0.0,
             },
-            anim: UniformAnim(Timer::from_seconds(0.1, true)),
+            anim: AnimationTimer(Timer::from_seconds(0.1, true)),
             hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
             health: Health::new(ELEMENTAL_HEALTH),
             state: EnemyState::Idle,
+            attack_timer: AttackTimer(Timer::from_seconds(ELEMENTAL_ATTACK_PERIOD, false)),
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
@@ -100,7 +105,12 @@ pub struct Plugin;
 impl Plugin {
     fn update_state(
         mut q_enemy: Query<
-            (&Transform, &mut EnemyState, &TextureAtlasSprite),
+            (
+                &Transform,
+                &mut EnemyState,
+                &TextureAtlasSprite,
+                &mut AttackTimer,
+            ),
             (With<Enemy>, Without<Player>),
         >,
         rapier_ctx: Res<RapierContext>,
@@ -112,7 +122,7 @@ impl Plugin {
         };
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, mut enemy_state, sprite) in &mut q_enemy {
+        for (enemy_transform, mut enemy_state, sprite, mut attack_timer) in &mut q_enemy {
             let enemy_pos = enemy_transform.translation.truncate();
             let direction = player_pos - enemy_pos;
             let distance = direction.length();
@@ -133,22 +143,132 @@ impl Plugin {
 
                     if distance > ELEMENTAL_FORGET_RANGE {
                         *enemy_state = EnemyState::Idle;
-                    } else if matches!(
-                        rapier_ctx.cast_ray(enemy_pos, direction, f32::MAX, true, sight_filter),
-                        Some((hit, _)) if hit == player,
-                    ) && distance < ELEMENTAL_ATTACK_RANGE
+                    } else if attack_timer.finished()
+                        && matches!(
+                            rapier_ctx.cast_ray(enemy_pos, direction, f32::MAX, true, sight_filter),
+                            Some((hit, _)) if hit == player,
+                        )
+                        && distance < ELEMENTAL_ATTACK_RANGE
                     {
                         *enemy_state = EnemyState::Attack;
+                        attack_timer.reset();
                     }
                 }
                 EnemyState::Attack => {
-                    if sprite.index == ELEMENTAL_ATTACK_ANIM_OFFSET + ELEMENTAL_ATTACK_ANIM_FRAMES {
+                    if sprite.index
+                        == ELEMENTAL_ATTACK_ANIM_OFFSET + ELEMENTAL_ATTACK_ANIM_FRAMES - 1
+                    {
                         *enemy_state = EnemyState::Chase;
                     }
                 }
             }
         }
     }
+
+    fn tick_attack(
+        mut q_enemy: Query<&mut AttackTimer>,
+        time: Res<Time>,
+        time_scale: Res<TimeScale>,
+    ) {
+        let delta = time.delta().mul_f32(**time_scale);
+        for mut timer in &mut q_enemy {
+            timer.tick(delta);
+        }
+    }
+
+    fn attack(
+        mut cmd: Commands,
+        q_enemy: Query<
+            (&Transform, &TextureAtlasSprite),
+            (With<Enemy>, Without<Player>, Changed<TextureAtlasSprite>),
+        >,
+        q_player: Query<&Transform, (Without<Enemy>, With<Player>)>,
+    ) {
+        let player_transform = match q_player.get_single() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        let player_pos = player_transform.translation.truncate();
+
+        for (enemy_transform, sprite) in &q_enemy {
+            if sprite.index == ELEMENTAL_ATTACK_EMIT_FRAME {
+                let enemy_pos = enemy_transform.translation.truncate();
+                let direction = (player_pos - enemy_pos).normalize();
+                // do attack
+                cmd.spawn_bundle(SpriteBundle {
+                    transform: Transform {
+                        translation: enemy_transform.translation,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .insert_bundle((
+                    RigidBody::Dynamic,
+                    Velocity {
+                        linvel: direction * ELEMENTAL_ATTACK_VELOCITY,
+                        angvel: 0.0,
+                    },
+                    Collider::ball(2.0),
+                    CollisionGroups {
+                        memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                        filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                    },
+                    ActiveEvents::COLLISION_EVENTS,
+                ));
+            }
+        }
+    }
+
+    fn anim(
+        mut q_enemy: Query<
+            (
+                &mut TextureAtlasSprite,
+                &mut EnemyState,
+                &mut AnimationTimer,
+            ),
+            With<Enemy>,
+        >,
+
+        time: Res<Time>,
+        time_scale: Res<TimeScale>,
+    ) {
+        let delta = time.delta().mul_f32(**time_scale);
+        for (mut sprite, state, mut timer) in &mut q_enemy {
+            if state.is_changed() {
+                sprite.index = match *state {
+                    EnemyState::Idle => ELEMENTAL_IDLE_ANIM_OFFSET,
+                    EnemyState::Chase => ELEMENTAL_WALK_ANIM_OFFSET,
+                    EnemyState::Attack => ELEMENTAL_ATTACK_ANIM_OFFSET,
+                }
+            }
+
+            timer.tick(delta);
+
+            if timer.finished() {
+                sprite.index = match *state {
+                    EnemyState::Idle => {
+                        ELEMENTAL_IDLE_ANIM_OFFSET
+                            + ELEMENTAL_IDLE_ANIM_FRAMES * 0
+                            + ((sprite.index - ELEMENTAL_IDLE_ANIM_OFFSET + 1)
+                                % ELEMENTAL_IDLE_ANIM_FRAMES)
+                    }
+                    EnemyState::Chase => {
+                        ELEMENTAL_WALK_ANIM_OFFSET
+                            + ELEMENTAL_WALK_ANIM_FRAMES * 0
+                            + ((sprite.index - ELEMENTAL_WALK_ANIM_OFFSET + 1)
+                                % ELEMENTAL_WALK_ANIM_FRAMES)
+                    }
+                    EnemyState::Attack => {
+                        ELEMENTAL_ATTACK_ANIM_OFFSET
+                            + ELEMENTAL_ATTACK_ANIM_FRAMES * 0
+                            + ((sprite.index - ELEMENTAL_ATTACK_ANIM_OFFSET + 1)
+                                % ELEMENTAL_ATTACK_ANIM_FRAMES)
+                    }
+                }
+            }
+        }
+    }
+
     fn movement(
         mut q_enemy: Query<
             (
@@ -282,7 +402,7 @@ impl Plugin {
     }
 
     fn tick_hitstun(
-        mut q_enemy: Query<(&mut HitstunTimer, &mut UniformAnim), With<Enemy>>,
+        mut q_enemy: Query<(&mut HitstunTimer, &mut AnimationTimer), With<Enemy>>,
         time: Res<Time>,
         time_scale: Res<TimeScale>,
     ) {
@@ -303,6 +423,9 @@ impl bevy::app::Plugin for Plugin {
         app.add_system(Self::tick_hitstun.run_in_state(GameState::InGame))
             .add_system(Self::update_state.run_in_state(GameState::InGame))
             .add_system(Self::movement.run_in_state(GameState::InGame))
+            .add_system(Self::tick_attack.run_in_state(GameState::InGame))
+            .add_system(Self::attack.run_in_state(GameState::InGame))
+            .add_system(Self::anim.run_in_state(GameState::InGame))
             .register_ldtk_entity::<ElementalBundle>("Elemental");
     }
 }

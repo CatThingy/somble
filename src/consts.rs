@@ -29,13 +29,14 @@ pub const POTION_SPIN_SPEED: f32 = 32.0;
 pub const GRID_SIZE: i32 = 16;
 
 pub const ELEMENTAL_IDLE_ANIM_OFFSET: usize = 0;
-pub const ELEMENTAL_IDLE_ANIM_FRAMES: usize = 0;
+pub const ELEMENTAL_IDLE_ANIM_FRAMES: usize = 3;
 
 pub const ELEMENTAL_WALK_ANIM_OFFSET: usize = 0;
-pub const ELEMENTAL_WALK_ANIM_FRAMES: usize = 0;
+pub const ELEMENTAL_WALK_ANIM_FRAMES: usize = 3;
 
-pub const ELEMENTAL_ATTACK_ANIM_OFFSET: usize = 0;
-pub const ELEMENTAL_ATTACK_ANIM_FRAMES: usize = 0;
+pub const ELEMENTAL_ATTACK_ANIM_OFFSET: usize = 3;
+pub const ELEMENTAL_ATTACK_ANIM_FRAMES: usize = 7;
+pub const ELEMENTAL_ATTACK_EMIT_FRAME: usize = 7;
 
 pub const ELEMENTAL_SPEED: f32 = 50.0;
 pub const ELEMENTAL_HEALTH: f32 = 100.0;
@@ -43,6 +44,8 @@ pub const ELEMENTAL_AGGRO_RANGE: f32 = 100.0;
 pub const ELEMENTAL_FORGET_RANGE: f32 = 200.0;
 pub const ELEMENTAL_ATTACK_RANGE: f32 = 50.0;
 pub const ELEMENTAL_ATTACK_PERIOD: f32 = 0.7;
+
+pub const ELEMENTAL_ATTACK_VELOCITY: f32 = 100.0;
 
 pub const FIRE_FIRE_RADIUS: f32 = 32.0;
 pub const FIRE_FIRE_IMPULSE: f32 = 25.0;
@@ -115,4 +118,4 @@ pub const LIGHTNING_EARTH_RADIUS: f32 = 2.0;
 pub const LIGHTNING_EARTH_SPEED: f32 = 600.0;
 pub const LIGHTNING_EARTH_HITSTUN: f32 = 1.5;
 pub const LIGHTNING_EARTH_DAMAGE: f32 = 0.0;
-pub const LIGHTNING_EARTH_DURATION: f32 = 0.0;
+pub const LIGHTNING_EARTH_DURATION: f32 = 0.3;

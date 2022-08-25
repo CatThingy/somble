@@ -28,7 +28,7 @@ pub enum GameState {
     InGame,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug)]
 pub enum Element {
     Fire,
     Water,

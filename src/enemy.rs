@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{prelude::*, sprite::Anchor};
 
 use bevy_ecs_ldtk::prelude::*;
@@ -14,7 +16,7 @@ use crate::level::WalkableTiles;
 use crate::status::Blinded;
 use crate::status::Slowed;
 use crate::utils::TimeScale;
-use crate::utils::UniformAnim;
+use crate::Element;
 use crate::{consts::*, player::Player, Enemy, GameState};
 
 #[derive(Component, Deref, DerefMut, Debug)]
@@ -25,6 +27,14 @@ pub struct AttackTimer(Timer);
 
 #[derive(Component, Deref, DerefMut)]
 struct AnimationTimer(Timer);
+
+#[derive(Component, Default)]
+pub struct EnemyStats {
+    speed: f32,
+    aggro_range: f32,
+    forget_range: f32,
+    attack_range: f32,
+}
 
 #[derive(Component, PartialEq, Debug)]
 pub enum EnemyState {
@@ -47,13 +57,15 @@ pub struct ElementalBundle {
     health: Health,
     state: EnemyState,
     attack_timer: AttackTimer,
+    element: Element,
+    stats: EnemyStats,
     #[bundle]
     spritesheet: SpriteSheetBundle,
 }
 
 impl LdtkEntity for ElementalBundle {
     fn bundle_entity(
-        _: &EntityInstance,
+        entity_instance: &EntityInstance,
         _: &LayerInstance,
         _: Option<&Handle<Image>>,
         _: Option<&TilesetDefinition>,
@@ -64,7 +76,27 @@ impl LdtkEntity for ElementalBundle {
         let elemental_atlas =
             TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 10, 1);
         let texture_atlas = texture_atlases.add(elemental_atlas);
-        ElementalBundle {
+
+        let mut element = None;
+        for field in &entity_instance.field_instances {
+            if field.identifier.as_str() == "Element" {
+                element = match &field.value {
+                    FieldValue::Enum(value) => match value.as_ref().unwrap().as_str() {
+                        "Fire" => Some(Element::Fire),
+                        "Water" => Some(Element::Water),
+                        "Wind" => Some(Element::Wind),
+                        "Lightning" => Some(Element::Lightning),
+                        "Earth" => Some(Element::Earth),
+                        _ => unreachable!(),
+                    },
+                    _ => unreachable!(),
+                }
+            }
+        }
+
+        let element = element.unwrap();
+
+        let mut bundle = ElementalBundle {
             enemy: Enemy,
             body: RigidBody::Dynamic,
             velocity: Velocity::default(),
@@ -81,21 +113,116 @@ impl LdtkEntity for ElementalBundle {
                 linear_damping: 20.0,
                 angular_damping: 0.0,
             },
-            anim: AnimationTimer(Timer::from_seconds(0.1, true)),
+            anim: AnimationTimer(Timer::from_seconds(0.0, true)),
             hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
-            health: Health::new(ELEMENTAL_HEALTH),
+            health: Health::new(0.0),
             state: EnemyState::Idle,
-            attack_timer: AttackTimer(Timer::from_seconds(ELEMENTAL_ATTACK_PERIOD, false)),
+            attack_timer: AttackTimer(Timer::from_seconds(0.0, false)),
+            element,
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
                     index: 0,
-                    color: Color::LIME_GREEN,
+                    color: Color::WHITE,
                     ..default()
                 },
                 texture_atlas,
                 ..default()
             },
+            stats: EnemyStats::default(),
+        };
+
+        match element {
+            Element::Fire => {
+                bundle
+                    .anim
+                    .set_duration(Duration::from_secs_f32(FIRE_ELEMENTAL_ANIM_PERIOD));
+                bundle
+                    .attack_timer
+                    .set_duration(Duration::from_secs_f32(FIRE_ELEMENTAL_ATTACK_PERIOD));
+                bundle.health = Health::new(FIRE_ELEMENTAL_HEALTH);
+                bundle.stats = EnemyStats {
+                    speed: FIRE_ELEMENTAL_SPEED,
+                    aggro_range: FIRE_ELEMENTAL_AGGRO_RANGE,
+                    forget_range: FIRE_ELEMENTAL_FORGET_RANGE,
+                    attack_range: FIRE_ELEMENTAL_ATTACK_RANGE,
+                };
+                bundle.spritesheet.sprite.color = Color::ORANGE_RED;
+
+                bundle
+            }
+            Element::Water => {
+                bundle
+                    .anim
+                    .set_duration(Duration::from_secs_f32(WATER_ELEMENTAL_ANIM_PERIOD));
+                bundle
+                    .attack_timer
+                    .set_duration(Duration::from_secs_f32(WATER_ELEMENTAL_ATTACK_PERIOD));
+                bundle.health = Health::new(WATER_ELEMENTAL_HEALTH);
+                bundle.stats = EnemyStats {
+                    speed: WATER_ELEMENTAL_SPEED,
+                    aggro_range: WATER_ELEMENTAL_AGGRO_RANGE,
+                    forget_range: WATER_ELEMENTAL_FORGET_RANGE,
+                    attack_range: WATER_ELEMENTAL_ATTACK_RANGE,
+                };
+                bundle.spritesheet.sprite.color = Color::BLUE;
+
+                bundle
+            }
+            Element::Wind => {
+                bundle
+                    .anim
+                    .set_duration(Duration::from_secs_f32(WIND_ELEMENTAL_ANIM_PERIOD));
+                bundle
+                    .attack_timer
+                    .set_duration(Duration::from_secs_f32(WIND_ELEMENTAL_ATTACK_PERIOD));
+                bundle.health = Health::new(WIND_ELEMENTAL_HEALTH);
+                bundle.stats = EnemyStats {
+                    speed: WIND_ELEMENTAL_SPEED,
+                    aggro_range: WIND_ELEMENTAL_AGGRO_RANGE,
+                    forget_range: WIND_ELEMENTAL_FORGET_RANGE,
+                    attack_range: WIND_ELEMENTAL_ATTACK_RANGE,
+                };
+                bundle.spritesheet.sprite.color = Color::AQUAMARINE;
+
+                bundle
+            }
+            Element::Lightning => {
+                bundle
+                    .anim
+                    .set_duration(Duration::from_secs_f32(LIGHTNING_ELEMENTAL_ANIM_PERIOD));
+                bundle
+                    .attack_timer
+                    .set_duration(Duration::from_secs_f32(LIGHTNING_ELEMENTAL_ATTACK_PERIOD));
+                bundle.health = Health::new(LIGHTNING_ELEMENTAL_HEALTH);
+                bundle.stats = EnemyStats {
+                    speed: LIGHTNING_ELEMENTAL_SPEED,
+                    aggro_range: LIGHTNING_ELEMENTAL_AGGRO_RANGE,
+                    forget_range: LIGHTNING_ELEMENTAL_FORGET_RANGE,
+                    attack_range: LIGHTNING_ELEMENTAL_ATTACK_RANGE,
+                };
+                bundle.spritesheet.sprite.color = Color::YELLOW;
+
+                bundle
+            }
+            Element::Earth => {
+                bundle
+                    .anim
+                    .set_duration(Duration::from_secs_f32(EARTH_ELEMENTAL_ANIM_PERIOD));
+                bundle
+                    .attack_timer
+                    .set_duration(Duration::from_secs_f32(EARTH_ELEMENTAL_ATTACK_PERIOD));
+                bundle.health = Health::new(EARTH_ELEMENTAL_HEALTH);
+                bundle.stats = EnemyStats {
+                    speed: EARTH_ELEMENTAL_SPEED,
+                    aggro_range: EARTH_ELEMENTAL_AGGRO_RANGE,
+                    forget_range: EARTH_ELEMENTAL_FORGET_RANGE,
+                    attack_range: EARTH_ELEMENTAL_ATTACK_RANGE,
+                };
+                bundle.spritesheet.sprite.color = Color::GREEN;
+
+                bundle
+            }
         }
     }
 }
@@ -110,6 +237,7 @@ impl Plugin {
                 &mut EnemyState,
                 &TextureAtlasSprite,
                 &mut AttackTimer,
+                &EnemyStats,
             ),
             (With<Enemy>, Without<Player>),
         >,
@@ -122,13 +250,13 @@ impl Plugin {
         };
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, mut enemy_state, sprite, mut attack_timer) in &mut q_enemy {
+        for (enemy_transform, mut enemy_state, sprite, mut attack_timer, stats) in &mut q_enemy {
             let enemy_pos = enemy_transform.translation.truncate();
             let direction = player_pos - enemy_pos;
             let distance = direction.length();
             match *enemy_state {
                 EnemyState::Idle => {
-                    if distance < ELEMENTAL_AGGRO_RANGE {
+                    if distance < stats.aggro_range {
                         *enemy_state = EnemyState::Chase;
                     }
                 }
@@ -141,14 +269,14 @@ impl Plugin {
                         ..default()
                     };
 
-                    if distance > ELEMENTAL_FORGET_RANGE {
+                    if distance > stats.forget_range {
                         *enemy_state = EnemyState::Idle;
                     } else if attack_timer.finished()
                         && matches!(
                             rapier_ctx.cast_ray(enemy_pos, direction, f32::MAX, true, sight_filter),
                             Some((hit, _)) if hit == player,
                         )
-                        && distance < ELEMENTAL_ATTACK_RANGE
+                        && distance < stats.attack_range
                     {
                         *enemy_state = EnemyState::Attack;
                         attack_timer.reset();
@@ -179,7 +307,7 @@ impl Plugin {
     fn attack(
         mut cmd: Commands,
         q_enemy: Query<
-            (&Transform, &TextureAtlasSprite),
+            (&Transform, &TextureAtlasSprite, &Element),
             (With<Enemy>, Without<Player>, Changed<TextureAtlasSprite>),
         >,
         q_player: Query<&Transform, (Without<Enemy>, With<Player>)>,
@@ -190,31 +318,123 @@ impl Plugin {
         };
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, sprite) in &q_enemy {
+        for (enemy_transform, sprite, element) in &q_enemy {
             if sprite.index == ELEMENTAL_ATTACK_EMIT_FRAME {
                 let enemy_pos = enemy_transform.translation.truncate();
                 let direction = (player_pos - enemy_pos).normalize();
                 // do attack
-                cmd.spawn_bundle(SpriteBundle {
-                    transform: Transform {
-                        translation: enemy_transform.translation,
-                        ..default()
-                    },
-                    ..default()
-                })
-                .insert_bundle((
-                    RigidBody::Dynamic,
-                    Velocity {
-                        linvel: direction * ELEMENTAL_ATTACK_VELOCITY,
-                        angvel: 0.0,
-                    },
-                    Collider::ball(2.0),
-                    CollisionGroups {
-                        memberships: ENEMY_ATTACK_COLLISION_GROUP,
-                        filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
-                    },
-                    ActiveEvents::COLLISION_EVENTS,
-                ));
+                match element {
+                    Element::Fire => {
+                        cmd.spawn_bundle(SpriteBundle {
+                            transform: Transform {
+                                translation: enemy_transform.translation,
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .insert_bundle((
+                            RigidBody::Dynamic,
+                            Velocity {
+                                linvel: direction * FIRE_ELEMENTAL_ATTACK_VELOCITY,
+                                angvel: 0.0,
+                            },
+                            Collider::ball(2.0),
+                            CollisionGroups {
+                                memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                            },
+                            ActiveEvents::COLLISION_EVENTS,
+                        ));
+                    }
+                    Element::Water => {
+                        cmd.spawn_bundle(SpriteBundle {
+                            transform: Transform {
+                                translation: enemy_transform.translation,
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .insert_bundle((
+                            RigidBody::Dynamic,
+                            Velocity {
+                                linvel: direction * WATER_ELEMENTAL_ATTACK_VELOCITY,
+                                angvel: 0.0,
+                            },
+                            Collider::ball(2.0),
+                            CollisionGroups {
+                                memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                            },
+                            ActiveEvents::COLLISION_EVENTS,
+                        ));
+                    }
+                    Element::Wind => {
+                        cmd.spawn_bundle(SpriteBundle {
+                            transform: Transform {
+                                translation: enemy_transform.translation,
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .insert_bundle((
+                            RigidBody::Dynamic,
+                            Velocity {
+                                linvel: direction * WIND_ELEMENTAL_ATTACK_VELOCITY,
+                                angvel: 0.0,
+                            },
+                            Collider::ball(2.0),
+                            CollisionGroups {
+                                memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                            },
+                            ActiveEvents::COLLISION_EVENTS,
+                        ));
+                    }
+                    Element::Lightning => {
+                        cmd.spawn_bundle(SpriteBundle {
+                            transform: Transform {
+                                translation: enemy_transform.translation,
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .insert_bundle((
+                            RigidBody::Dynamic,
+                            Velocity {
+                                linvel: direction * LIGHTNING_ELEMENTAL_ATTACK_VELOCITY,
+                                angvel: 0.0,
+                            },
+                            Collider::ball(2.0),
+                            CollisionGroups {
+                                memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                            },
+                            ActiveEvents::COLLISION_EVENTS,
+                        ));
+                    }
+                    Element::Earth => {
+                        cmd.spawn_bundle(SpriteBundle {
+                            transform: Transform {
+                                translation: enemy_transform.translation,
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .insert_bundle((
+                            RigidBody::Dynamic,
+                            Velocity {
+                                linvel: direction * EARTH_ELEMENTAL_ATTACK_VELOCITY,
+                                angvel: 0.0,
+                            },
+                            Collider::ball(2.0),
+                            CollisionGroups {
+                                memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                            },
+                            ActiveEvents::COLLISION_EVENTS,
+                        ));
+                    }
+                }
             }
         }
     }
@@ -278,6 +498,7 @@ impl Plugin {
                 &mut TextureAtlasSprite,
                 &Collider,
                 &EnemyState,
+                &EnemyStats,
                 Option<&Slowed>,
                 Option<&Blinded>,
             ),
@@ -304,7 +525,7 @@ impl Plugin {
             ..default()
         };
 
-        for (transform, mut vel, hitstun, mut sprite, collider, state, slowed, blinded) in
+        for (transform, mut vel, hitstun, mut sprite, collider, state, stats, slowed, blinded) in
             &mut q_enemy
         {
             if !hitstun.finished() || state != &EnemyState::Chase {
@@ -313,7 +534,7 @@ impl Plugin {
             let pos = transform.translation.truncate();
             let direction = player_pos - pos;
 
-            let speed = ELEMENTAL_SPEED
+            let speed = stats.speed
                 * match slowed {
                     Some(_) => 0.7,
                     None => 1.0,

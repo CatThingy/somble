@@ -81,6 +81,19 @@ impl FromWorld for ElementIconAtlases {
     }
 }
 
+#[derive(Deref)]
+pub struct Digits(pub Handle<TextureAtlas>);
+
+impl FromWorld for Digits {
+    fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+        let texture = assets.load("digits.png");
+        let mut atlases = world.resource_mut::<Assets<TextureAtlas>>();
+
+        Digits(atlases.add(TextureAtlas::from_grid(texture, Vec2::splat(8.0), 10, 1)))
+    }
+}
+
 pub struct Plugin;
 
 impl Plugin {
@@ -263,6 +276,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::propagate_time_scale)
             .init_resource::<MousePosition>()
             .init_resource::<TimeScale>()
-            .init_resource::<ElementIconAtlases>();
+            .init_resource::<ElementIconAtlases>()
+            .init_resource::<Digits>();
     }
 }

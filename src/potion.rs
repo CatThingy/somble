@@ -4,6 +4,7 @@ use iyes_loopless::prelude::*;
 
 use crate::{
     consts::*,
+    essence::EssenceCounts,
     hitbox::{
         DamageOnce, DamagePeriodic, DirectedForce, Falloff, Hitbox, Hitstun, RadialForce,
         RadialImpulse, StatusEffect,
@@ -12,7 +13,8 @@ use crate::{
     player::Player,
     status::Effect,
     utils::{
-        DespawnTimer, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale, UniformAnim,
+        DespawnTimer, Digits, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale,
+        UniformAnim,
     },
     Element, GameState,
 };
@@ -28,6 +30,9 @@ pub struct PotionUiSelect2;
 
 #[derive(Component, Debug)]
 pub struct PotionType(Element, Element);
+
+#[derive(Component)]
+pub struct EssenceCounter(Element);
 
 #[derive(Bundle)]
 pub struct PotionBundle {
@@ -607,6 +612,7 @@ impl Plugin {
         mut cmd: Commands,
         assets: Res<AssetServer>,
         element_icons: ResMut<ElementIconAtlases>,
+        digits: Res<Digits>,
     ) {
         cmd.spawn_bundle(SpriteBundle {
             sprite: Sprite {
@@ -677,7 +683,29 @@ impl Plugin {
                     },
                     UniformAnim(Timer::from_seconds(0.1, true)),
                     TimeIndependent,
-                ));
+                ))
+                .with_children(|root| {
+                    root.spawn_bundle(SpriteSheetBundle {
+                        texture_atlas: digits.clone_weak(),
+                        transform: Transform {
+                            translation: Vec3::new(0.0, -9.0, 0.0),
+                            ..default()
+                        },
+                        sprite: TextureAtlasSprite {
+                            color: Color::RED,
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .insert(EssenceCounter(match i {
+                        0 => Element::Fire,
+                        1 => Element::Water,
+                        2 => Element::Wind,
+                        3 => Element::Lightning,
+                        4 => Element::Earth,
+                        _ => unreachable!(),
+                    }));
+                });
             }
         });
     }
@@ -735,6 +763,7 @@ impl Plugin {
         element_icons: ResMut<ElementIconAtlases>,
         mut brew_data: ResMut<PotionBrewData>,
         mut brew_state: ResMut<PotionBrewState>,
+        mut counts: ResMut<EssenceCounts>,
     ) {
         if *brew_state != PotionBrewState::Active {
             return;
@@ -761,18 +790,21 @@ impl Plugin {
                 *brew_state = PotionBrewState::Inactive;
                 return;
             } else if relative_mouse_pos.length() > BREW_UI_DEADZONE {
-                match brew_data.contents {
-                    (None, None) => {
-                        brew_data.contents.0 = Some(element);
-                        sprite1.color.set_a(1.0);
-                        *handle1 = element_icons[index].clone_weak();
+                if counts[element] != 0 {
+                    *counts.get_mut(&element).unwrap() -= 1;
+                    match brew_data.contents {
+                        (None, None) => {
+                            brew_data.contents.0 = Some(element);
+                            sprite1.color.set_a(1.0);
+                            *handle1 = element_icons[index].clone_weak();
+                        }
+                        (Some(first), None) => {
+                            brew_data.contents.1 = Some(element);
+                            event_writer.send(ThrowPotion(first, element));
+                            *brew_state = PotionBrewState::Inactive;
+                        }
+                        _ => unreachable!(),
                     }
-                    (Some(first), None) => {
-                        brew_data.contents.1 = Some(element);
-                        event_writer.send(ThrowPotion(first, element));
-                        *brew_state = PotionBrewState::Inactive;
-                    }
-                    _ => unreachable!(),
                 }
             }
         } else {
@@ -812,6 +844,7 @@ impl Plugin {
             &mut Handle<TextureAtlas>,
             (Without<PotionUiSelect1>, With<PotionUiSelect2>),
         >,
+        mut counts: ResMut<EssenceCounts>,
     ) {
         if brew_state.is_changed() && *brew_state == PotionBrewState::Active {
             **time_scale = 0.01;
@@ -819,6 +852,12 @@ impl Plugin {
         } else if brew_state.is_changed() && *brew_state == PotionBrewState::Inactive {
             **time_scale = 1.0;
             q_brew_ui.single_mut().is_visible = false;
+
+            if brew_data.contents.1.is_none() {
+                if let Some(element) = brew_data.contents.0 {
+                    *counts.get_mut(&element).unwrap() += 1;
+                }
+            }
             brew_data.contents = (None, None);
             *q_brew_display1.single_mut() = Handle::<TextureAtlas>::default();
             *q_brew_display2.single_mut() = Handle::<TextureAtlas>::default();
@@ -929,6 +968,25 @@ impl Plugin {
             }
         }
     }
+
+    fn update_counter(
+        mut q_counter: Query<(&mut TextureAtlasSprite, &EssenceCounter)>,
+        amounts: Res<EssenceCounts>,
+    ) {
+        if amounts.is_changed() {
+            for (mut sprite, essence) in &mut q_counter {
+                let count = *amounts.get(&essence.0).unwrap() as usize;
+                sprite.index = count;
+                if count == 0 {
+                    sprite.color = Color::RED;
+                } else if count == 3 {
+                    sprite.color = Color::YELLOW;
+                } else {
+                    sprite.color = Color::WHITE;
+                }
+            }
+        }
+    }
 }
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
@@ -937,6 +995,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::manage_brew_state.run_in_state(GameState::InGame))
             .add_system(Self::update_brew.run_in_state(GameState::InGame))
             .add_system(Self::potion_explode.run_in_state(GameState::InGame))
+            .add_system(Self::update_counter.run_in_state(GameState::InGame))
             .init_resource::<PotionBrewData>()
             .init_resource::<PotionBrewState>()
             .add_event::<ThrowPotion>();

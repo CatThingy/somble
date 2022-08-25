@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
@@ -21,6 +23,14 @@ impl Default for EssenceCounts {
             (Element::Lightning, 0),
             (Element::Earth, 0),
         ]))
+    }
+}
+
+impl Index<Element> for EssenceCounts {
+    type Output = u32;
+
+    fn index(&self, index: Element) -> &Self::Output {
+        &self.0[&index]
     }
 }
 
@@ -82,27 +92,22 @@ impl Plugin {
                         if let Ok(data) = q_essence.get(*e2) {
                             essence_data = data;
                         } else {
-                            info!("e1 was player, but e2 was not essence");
                             continue;
                         }
                     } else if let Ok(_) = q_player.get(*e2) {
                         if let Ok(data) = q_essence.get(*e1) {
                             essence_data = data;
                         } else {
-                            info!("e2 was player, but e1 was not essence");
                             continue;
                         }
                     } else {
-                        info!("{e1:?}, {e2:?}");
                         continue;
                     }
                     let (element, essence) = essence_data;
-                    dbg!(element);
-                    let count = counts.get_mut(element).unwrap();
 
-                    if *count < 3 {
+                    if counts[*element] < 3 {
                         cmd.entity(essence).despawn_recursive();
-                        *count += 1;
+                        *counts.get_mut(element).unwrap() += 1;
                     }
                 }
                 _ => (),

@@ -5,7 +5,8 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::{
-    health::HealthChange, hitstun::HitstunTimer, status::Effect, utils::TimeScale, Enemy, GameState,
+    health::HealthChange, hitstun::HitstunTimer, player::Player, status::Effect, utils::TimeScale,
+    Enemy, GameState,
 };
 
 #[derive(Component)]
@@ -132,10 +133,10 @@ pub struct StatusEffect(pub Effect);
 pub struct Plugin;
 
 impl Plugin {
-    fn handle_hits(
+    fn handle_hits<T: Component>(
         mut cmd: Commands,
         mut event_reader: EventReader<CollisionEvent>,
-        mut q_enemy: Query<(&GlobalTransform, &mut HitstunTimer), (With<Enemy>, Without<Hitbox>)>,
+        mut q_target: Query<(&GlobalTransform, &mut HitstunTimer), (With<T>, Without<Hitbox>)>,
         mut q_hitbox: Query<
             (
                 &GlobalTransform,
@@ -148,7 +149,7 @@ impl Plugin {
                 Option<&mut DamagePeriodic>,
                 Option<&StatusEffect>,
             ),
-            (Without<Enemy>, With<Hitbox>),
+            (Without<T>, With<Hitbox>),
         >,
         mut event_writer: EventWriter<HealthChange>,
     ) {
@@ -156,20 +157,20 @@ impl Plugin {
             match event {
                 CollisionEvent::Started(e1, e2, _) => {
                     let hitbox_data;
-                    let enemy_data;
-                    let enemy_entity;
-                    if let Ok(enemy) = q_enemy.get_mut(*e1) {
+                    let target_data;
+                    let target_entity;
+                    if let Ok(enemy) = q_target.get_mut(*e1) {
                         if let Ok(hitbox) = q_hitbox.get_mut(*e2) {
-                            enemy_entity = e1;
-                            enemy_data = enemy;
+                            target_entity = e1;
+                            target_data = enemy;
                             hitbox_data = hitbox;
                         } else {
                             continue;
                         }
-                    } else if let Ok(enemy) = q_enemy.get_mut(*e2) {
+                    } else if let Ok(enemy) = q_target.get_mut(*e2) {
                         if let Ok(hitbox) = q_hitbox.get_mut(*e1) {
-                            enemy_entity = e2;
-                            enemy_data = enemy;
+                            target_entity = e2;
+                            target_data = enemy;
                             hitbox_data = hitbox;
                         } else {
                             continue;
@@ -178,7 +179,7 @@ impl Plugin {
                         continue;
                     }
 
-                    let (enemy_transform, mut hitstun_timer) = enemy_data;
+                    let (enemy_transform, mut hitstun_timer) = target_data;
                     let (
                         hitbox_transform,
                         hitstun,
@@ -200,7 +201,7 @@ impl Plugin {
                             - hitbox_transform.translation())
                         .truncate();
 
-                        cmd.entity(*enemy_entity).insert(ExternalImpulse {
+                        cmd.entity(*target_entity).insert(ExternalImpulse {
                             impulse: force_direction.normalize()
                                 * radial_impulse.force
                                 * radial_impulse.falloff.amount(force_direction.length()),
@@ -209,52 +210,52 @@ impl Plugin {
                     }
 
                     if let Some(directed_impulse) = directed_impulse {
-                        cmd.entity(*enemy_entity).insert(ExternalImpulse {
+                        cmd.entity(*target_entity).insert(ExternalImpulse {
                             impulse: **directed_impulse,
                             torque_impulse: 0.0,
                         });
                     }
 
                     if let Some(mut radial_force) = radial_force {
-                        radial_force.hostages.insert(*enemy_entity);
+                        radial_force.hostages.insert(*target_entity);
                     }
 
                     if let Some(mut directed_force) = directed_force {
-                        directed_force.hostages.insert(*enemy_entity);
+                        directed_force.hostages.insert(*target_entity);
                     }
 
                     if let Some(mut damage_once) = damage_once {
-                        if damage_once.hit.insert(*enemy_entity) {
+                        if damage_once.hit.insert(*target_entity) {
                             let distance = (enemy_transform.translation()
                                 - hitbox_transform.translation())
                             .truncate()
                             .length();
                             event_writer.send(HealthChange {
-                                target: *enemy_entity,
-                                amount: damage_once.amount * damage_once.falloff.amount(distance),
+                                target: *target_entity,
+                                amount: -damage_once.amount * damage_once.falloff.amount(distance),
                             })
                         }
                     }
 
                     if let Some(mut damage_periodic) = damage_periodic {
-                        damage_periodic.hostages.insert(*enemy_entity);
+                        damage_periodic.hostages.insert(*target_entity);
                     }
 
                     if let Some(status_effect) = status_effect {
-                        cmd.entity(*enemy_entity).insert(status_effect.0.clone());
+                        cmd.entity(*target_entity).insert(status_effect.0.clone());
                     }
                 }
                 CollisionEvent::Stopped(e1, e2, _) => {
                     let enemy_entity;
                     let hitbox_data;
-                    if let Ok(_) = q_enemy.get(*e1) {
+                    if let Ok(_) = q_target.get(*e1) {
                         if let Ok(h) = q_hitbox.get_mut(*e2) {
                             enemy_entity = e1;
                             hitbox_data = h;
                         } else {
                             continue;
                         }
-                    } else if let Ok(_) = q_enemy.get(*e2) {
+                    } else if let Ok(_) = q_target.get(*e2) {
                         if let Ok(h) = q_hitbox.get_mut(*e1) {
                             enemy_entity = e2;
                             hitbox_data = h;
@@ -281,11 +282,11 @@ impl Plugin {
         }
     }
 
-    fn update_continuous_boxes(
+    fn update_continuous_boxes<T: Component>(
         mut cmd: Commands,
         mut q_enemy: Query<
             (Entity, &GlobalTransform, &mut HitstunTimer),
-            (With<Enemy>, Without<Hitbox>),
+            (With<T>, Without<Hitbox>),
         >,
         mut q_hitbox: Query<
             (
@@ -294,7 +295,7 @@ impl Plugin {
                 Option<&DirectedForce>,
                 Option<&mut DamagePeriodic>,
             ),
-            (Without<Enemy>, With<Hitbox>),
+            (Without<T>, With<Hitbox>),
         >,
         mut event_writer: EventWriter<HealthChange>,
         time: Res<Time>,
@@ -321,7 +322,6 @@ impl Plugin {
                 let mut iter = q_enemy.iter_many_mut(directed_force.hostages.iter());
 
                 while let Some((entity, _, _)) = iter.fetch_next() {
-                    // hitstun.reset();
                     cmd.entity(entity).insert(ExternalImpulse {
                         impulse: directed_force.force,
                         torque_impulse: 0.0,
@@ -342,7 +342,7 @@ impl Plugin {
                             .length();
                         event_writer.send(HealthChange {
                             target: entity,
-                            amount: damage_periodic.amount
+                            amount: -damage_periodic.amount
                                 * damage_periodic.falloff.amount(distance),
                         });
                     }
@@ -355,12 +355,22 @@ impl Plugin {
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_system(
-            Self::handle_hits
+            Self::handle_hits::<Enemy>
                 .run_in_state(GameState::InGame)
                 .label("handle_hits"),
         )
         .add_system(
-            Self::update_continuous_boxes
+            Self::update_continuous_boxes::<Enemy>
+                .run_in_state(GameState::InGame)
+                .before("handle_hits"),
+        )
+        .add_system(
+            Self::handle_hits::<Player>
+                .run_in_state(GameState::InGame)
+                .label("handle_hits"),
+        )
+        .add_system(
+            Self::update_continuous_boxes::<Player>
                 .run_in_state(GameState::InGame)
                 .before("handle_hits"),
         );

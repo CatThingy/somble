@@ -24,6 +24,14 @@ pub struct UniformAnim(pub Timer);
 #[derive(Component, Deref, DerefMut)]
 pub struct DespawnTimer(pub Timer);
 
+#[derive(Component)]
+pub struct DestroyOnHit;
+
+#[derive(Component)]
+pub struct Spiral {
+    pub rate: f32,
+}
+
 pub struct ElementIconAtlases(pub [Handle<TextureAtlas>; 5]);
 
 impl Index<usize> for ElementIconAtlases {
@@ -116,6 +124,26 @@ impl Plugin {
                 // use it to convert ndc to world-space coordinates
                 mouse_pos.0 = ndc_to_world.project_point3(ndc.extend(-1.0));
                 mouse_pos.z = 0.0;
+            }
+        }
+    }
+    fn destroy_on_hit(
+        mut cmd: Commands,
+        mut event_reader: EventReader<CollisionEvent>,
+        q_destroy_on_hit: Query<(), With<DestroyOnHit>>,
+    ) {
+        for event in event_reader.iter() {
+            match event {
+                CollisionEvent::Started(e1, e2, _) => {
+                    if let Ok(_) = q_destroy_on_hit.get(*e1) {
+                        cmd.entity(*e1).despawn_recursive();
+                    } else if let Ok(_) = q_destroy_on_hit.get(*e2) {
+                        cmd.entity(*e2).despawn_recursive();
+                    } else {
+                        continue;
+                    }
+                }
+                _ => (),
             }
         }
     }
@@ -262,6 +290,24 @@ impl Plugin {
             }
         }
     }
+
+    fn spiral(
+        mut q_spiraling: Query<(&Spiral, &mut Velocity)>,
+        time: Res<Time>,
+        time_scale: Res<TimeScale>,
+    ) {
+        let delta = time.delta().mul_f32(**time_scale).as_secs_f32();
+
+        for (spiral, mut vel) in &mut q_spiraling {
+            let amount = spiral.rate * delta;
+
+            let cos = amount.cos();
+            let sin = amount.sin();
+
+            vel.linvel.x = cos * vel.linvel.x - sin * vel.linvel.y;
+            vel.linvel.y = sin * vel.linvel.x + cos * vel.linvel.y;
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
@@ -274,6 +320,8 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::update_animations)
             .add_system(Self::update_despawn)
             .add_system(Self::propagate_time_scale)
+            .add_system(Self::destroy_on_hit)
+            .add_system(Self::spiral)
             .init_resource::<MousePosition>()
             .init_resource::<TimeScale>()
             .init_resource::<ElementIconAtlases>()

@@ -6,6 +6,7 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::essence::Essence;
+use crate::health::Health;
 use crate::hitstun::HitstunTimer;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
 use crate::utils::{MousePosition, TimeScale};
@@ -38,6 +39,7 @@ pub struct PlayerBundle {
     collision_group: CollisionGroups,
     locked: LockedAxes,
     hitstun: HitstunTimer,
+    health: Health,
     #[bundle]
     spritesheet: SpriteSheetBundle,
 }
@@ -75,10 +77,11 @@ impl LdtkEntity for PlayerBundle {
             },
             collision_group: CollisionGroups {
                 memberships: PLAYER_COLLISION_GROUP,
-                filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ESSENCE_COLLISION_GROUP,
+                filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ESSENCE_COLLISION_GROUP | ENEMY_ATTACK_COLLISION_GROUP,
             },
             locked: LockedAxes::ROTATION_LOCKED,
             hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
+            health: Health::new(250.0),
         }
     }
 }
@@ -87,15 +90,19 @@ pub struct Plugin;
 
 impl Plugin {
     fn movement(
-        mut q_player: Query<&mut Velocity, With<Player>>,
+        mut q_player: Query<(&mut Velocity, &HitstunTimer), With<Player>>,
         keys: Res<Input<KeyCode>>,
         mut input_direction: ResMut<InputDirection>,
         mut player_direction: ResMut<PlayerDirection>,
     ) {
-        let mut player_vel = match q_player.get_single_mut() {
+        let (mut player_vel, hitstun) = match q_player.get_single_mut() {
             Ok(v) => v,
             Err(_) => return,
         };
+
+        if !hitstun.finished() {
+            return;
+        }
 
         // Prevent stopping on SOCD
         if keys.just_pressed(KeyCode::A) {

@@ -13,10 +13,17 @@ use pathfinding::directed::astar::astar;
 
 use crate::health::Dead;
 use crate::health::Health;
+use crate::hitbox::DamageOnce;
+use crate::hitbox::DamagePeriodic;
+use crate::hitbox::Falloff;
+use crate::hitbox::Hitbox;
 use crate::hitstun::HitstunTimer;
 use crate::level::WalkableTiles;
 use crate::status::Blinded;
 use crate::status::Slowed;
+use crate::utils::DespawnTimer;
+use crate::utils::DestroyOnHit;
+use crate::utils::Spiral;
 use crate::utils::TimeScale;
 use crate::utils::UniformAnim;
 use crate::Element;
@@ -338,35 +345,49 @@ impl Plugin {
                                 linvel: direction * FIRE_ELEMENTAL_ATTACK_VELOCITY,
                                 angvel: 0.0,
                             },
-                            Collider::ball(2.0),
+                            Collider::ball(FIRE_ELEMENTAL_ATTACK_RADIUS),
                             CollisionGroups {
                                 memberships: ENEMY_ATTACK_COLLISION_GROUP,
                                 filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
                             },
                             ActiveEvents::COLLISION_EVENTS,
+                            Sensor,
+                            Hitbox,
+                            DamageOnce::new(10.0, Falloff::none()),
+                            DestroyOnHit,
                         ));
                     }
                     Element::Water => {
-                        cmd.spawn_bundle(SpriteBundle {
-                            transform: Transform {
-                                translation: enemy_transform.translation,
+                        let rotation = enemy_transform.rotation.to_euler(EulerRot::XYZ).2;
+                        for i in 0..3 {
+                            let rotation = rotation + (std::f32::consts::TAU / 3 as f32) * i as f32;
+
+                            let direction = Mat2::from_angle(rotation) * Vec2::X;
+                            cmd.spawn_bundle(SpriteBundle {
+                                transform: Transform {
+                                    translation: enemy_transform.translation,
+                                    ..default()
+                                },
                                 ..default()
-                            },
-                            ..default()
-                        })
-                        .insert_bundle((
-                            RigidBody::Dynamic,
-                            Velocity {
-                                linvel: direction * WATER_ELEMENTAL_ATTACK_VELOCITY,
-                                angvel: 0.0,
-                            },
-                            Collider::ball(2.0),
-                            CollisionGroups {
-                                memberships: ENEMY_ATTACK_COLLISION_GROUP,
-                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
-                            },
-                            ActiveEvents::COLLISION_EVENTS,
-                        ));
+                            })
+                            .insert_bundle((
+                                RigidBody::Dynamic,
+                                Velocity {
+                                    linvel: direction * WATER_ELEMENTAL_ATTACK_VELOCITY,
+                                    angvel: 0.0,
+                                },
+                                Collider::ball(2.0),
+                                CollisionGroups {
+                                    memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                    filters: PLAYER_COLLISION_GROUP,
+                                },
+                                ActiveEvents::COLLISION_EVENTS,
+                                Sensor,
+                                Hitbox,
+                                DespawnTimer(Timer::from_seconds(5.0, false)),
+                                Spiral { rate: 2.0 },
+                            ));
+                        }
                     }
                     Element::Wind => {
                         cmd.spawn_bundle(SpriteBundle {
@@ -382,12 +403,15 @@ impl Plugin {
                                 linvel: direction * WIND_ELEMENTAL_ATTACK_VELOCITY,
                                 angvel: 0.0,
                             },
-                            Collider::ball(2.0),
+                            Collider::ball(8.0),
                             CollisionGroups {
                                 memberships: ENEMY_ATTACK_COLLISION_GROUP,
-                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                                filters: PLAYER_COLLISION_GROUP,
                             },
                             ActiveEvents::COLLISION_EVENTS,
+                            Sensor,
+                            Hitbox,
+                            DespawnTimer(Timer::from_seconds(0.05, false)),
                         ));
                     }
                     Element::Lightning => {
@@ -404,13 +428,27 @@ impl Plugin {
                                 linvel: direction * LIGHTNING_ELEMENTAL_ATTACK_VELOCITY,
                                 angvel: 0.0,
                             },
-                            Collider::ball(2.0),
+                            Collider::ball(4.0),
                             CollisionGroups {
                                 memberships: ENEMY_ATTACK_COLLISION_GROUP,
                                 filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
                             },
                             ActiveEvents::COLLISION_EVENTS,
-                        ));
+                            DespawnTimer(Timer::from_seconds(5.0, false)),
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn_bundle((
+                                Collider::ball(16.0),
+                                CollisionGroups {
+                                    memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                    filters: PLAYER_COLLISION_GROUP,
+                                },
+                                ActiveEvents::COLLISION_EVENTS,
+                                Sensor,
+                                Hitbox,
+                                DamagePeriodic::new(5.0, Falloff::none(), 0.5),
+                            ));
+                        });
                     }
                     Element::Earth => {
                         cmd.spawn_bundle(SpriteBundle {
@@ -426,12 +464,15 @@ impl Plugin {
                                 linvel: direction * EARTH_ELEMENTAL_ATTACK_VELOCITY,
                                 angvel: 0.0,
                             },
-                            Collider::ball(2.0),
+                            Collider::ball(16.0),
                             CollisionGroups {
                                 memberships: ENEMY_ATTACK_COLLISION_GROUP,
-                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                                filters: PLAYER_COLLISION_GROUP,
                             },
                             ActiveEvents::COLLISION_EVENTS,
+                            Sensor,
+                            Hitbox,
+                            DespawnTimer(Timer::from_seconds(0.05, false)),
                         ));
                     }
                 }
@@ -622,12 +663,15 @@ impl Plugin {
         }
     }
 
-    fn hitstun(mut q_enemy: Query<(&HitstunTimer, &mut AnimationTimer), With<Enemy>>) {
-        for (timer, mut anim) in &mut q_enemy {
+    fn hitstun(
+        mut q_enemy: Query<(&HitstunTimer, &mut AnimationTimer, &mut EnemyState), With<Enemy>>,
+    ) {
+        for (timer, mut anim, mut state) in &mut q_enemy {
             if timer.finished() && anim.paused() {
                 anim.unpause();
             } else if !timer.finished() && !anim.paused() {
                 anim.pause();
+                *state = EnemyState::Idle;
             }
         }
     }
@@ -665,8 +709,12 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::movement.run_in_state(GameState::InGame))
             .add_system(Self::tick_attack.run_in_state(GameState::InGame))
             .add_system(Self::attack.run_in_state(GameState::InGame))
-            .add_system(Self::anim.run_in_state(GameState::InGame))
-            .add_system(Self::start_die.run_in_state(GameState::InGame))
+            .add_system(Self::anim.run_in_state(GameState::InGame).label("anim"))
+            .add_system(
+                Self::start_die
+                    .run_in_state(GameState::InGame)
+                    .after("anim"),
+            )
             .add_system(Self::die.run_in_state(GameState::InGame))
             .register_ldtk_entity::<ElementalBundle>("Elemental");
     }

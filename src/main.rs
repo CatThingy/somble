@@ -1,6 +1,7 @@
 mod consts;
 mod enemy;
 mod essence;
+mod game_ui;
 mod health;
 mod hitbox;
 mod hitstun;
@@ -65,6 +66,7 @@ fn main() {
         .add_plugin(essence::Plugin)
         .add_plugin(main_menu::Plugin)
         .add_plugin(hitstun::Plugin)
+        .add_plugin(game_ui::Plugin)
         .add_startup_system(init)
         .run();
 }

@@ -206,7 +206,7 @@ fn lightning_lightning(
                     Sensor,
                     Hitbox,
                     Hitstun(LIGHTNING_LIGHTNING_HITSTUN),
-                    DamageOnce::new(-LIGHTNING_LIGHTNING_DAMAGE, Falloff::none()),
+                    DamageOnce::new(LIGHTNING_LIGHTNING_DAMAGE, Falloff::none()),
                     DespawnTimer(Timer::from_seconds(0.1, false)),
                 ));
         });

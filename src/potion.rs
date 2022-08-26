@@ -28,11 +28,14 @@ pub struct PotionUiSelect1;
 #[derive(Component)]
 pub struct PotionUiSelect2;
 
-#[derive(Component, Debug)]
+#[derive(Component, Clone, Copy)]
 pub struct PotionType(Element, Element);
 
 #[derive(Component)]
 pub struct EssenceCounter(Element);
+
+#[derive(Component, Clone, Copy)]
+struct ExplodePosition(Vec2);
 
 #[derive(Bundle)]
 pub struct PotionBundle {
@@ -44,6 +47,7 @@ pub struct PotionBundle {
     sprite: SpriteBundle,
     collision_group: CollisionGroups,
     active_events: ActiveEvents,
+    explode_pos: ExplodePosition,
 }
 
 #[derive(Default)]
@@ -58,7 +62,14 @@ pub enum PotionBrewState {
     #[default]
     Inactive,
 }
+
 pub struct ThrowPotion(pub Element, pub Element);
+
+struct PotionExplode {
+    potion_type: PotionType,
+    transform: Transform,
+    velocity: Velocity,
+}
 
 fn fire_fire(
     spawned: &mut EntityCommands,
@@ -716,6 +727,7 @@ impl Plugin {
         mut event_reader: EventReader<ThrowPotion>,
         q_player: Query<&Transform, With<Player>>,
         brew_data: Res<PotionBrewData>,
+        mouse_pos: Res<MousePosition>,
     ) {
         let player_transform = match q_player.get_single() {
             Ok(v) => v,
@@ -740,9 +752,10 @@ impl Plugin {
                 },
                 collision_group: CollisionGroups {
                     memberships: PLAYER_ATTACK_COLLISION_GROUP,
-                    filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                    filters: WALL_COLLISION_GROUP,
                 },
                 active_events: ActiveEvents::COLLISION_EVENTS,
+                explode_pos: ExplodePosition(mouse_pos.truncate()),
             });
         }
     }
@@ -867,108 +880,131 @@ impl Plugin {
     fn potion_explode(
         mut cmd: Commands,
         mut event_reader: EventReader<CollisionEvent>,
-        q_potion: Query<(&PotionType, &Transform, &Velocity)>,
-        assets: Res<AssetServer>,
-        mut atlases: ResMut<Assets<TextureAtlas>>,
+        q_potion: Query<(Entity, &PotionType, &Transform, &Velocity, &ExplodePosition)>,
+        mut event_writer: EventWriter<PotionExplode>,
     ) {
         for event in event_reader.iter() {
             match event {
                 CollisionEvent::Started(e1, e2, _) => {
-                    let potion_type;
-                    let location;
-                    let rotation;
-                    let velocity;
-
-                    if let Ok((p, t, v)) = q_potion.get(*e1) {
+                    if let Ok((_, &potion_type, &transform, &velocity, _)) = q_potion.get(*e1) {
+                        event_writer.send(PotionExplode {
+                            potion_type,
+                            transform,
+                            velocity,
+                        });
                         cmd.entity(*e1).despawn_recursive();
-                        potion_type = p;
-                        location = t.translation;
-                        rotation = t.rotation.to_euler(EulerRot::XYZ).2;
-                        velocity = v;
-                    } else if let Ok((p, t, v)) = q_potion.get(*e2) {
+                    } else if let Ok((_, &potion_type, &transform, &velocity, _)) =
+                        q_potion.get(*e2)
+                    {
+                        event_writer.send(PotionExplode {
+                            potion_type,
+                            transform,
+                            velocity,
+                        });
                         cmd.entity(*e2).despawn_recursive();
-                        potion_type = p;
-                        location = t.translation;
-                        rotation = t.rotation.to_euler(EulerRot::XYZ).2;
-                        velocity = v;
                     } else {
                         continue;
-                    }
-
-                    let mut spawned = cmd.spawn_bundle(SpatialBundle {
-                        transform: Transform {
-                            translation: location,
-                            ..default()
-                        },
-                        ..default()
-                    });
-                    {
-                        use Element::*;
-                        match (potion_type.0, potion_type.1) {
-                            (Fire, Fire) => {
-                                fire_fire(&mut spawned, &assets, &mut atlases);
-                            }
-                            (Water, Water) => {
-                                water_water(&mut spawned, &assets, &mut atlases, velocity);
-                            }
-                            (Wind, Wind) => {
-                                wind_wind(&mut spawned, &assets, &mut atlases);
-                            }
-                            (Lightning, Lightning) => {
-                                lightning_lightning(&mut spawned, &assets, &mut atlases);
-                            }
-                            (Earth, Earth) => {
-                                earth_earth(&mut spawned, &assets, &mut atlases);
-                                //big rock just sprouts and blocks stuff
-                            }
-                            (Fire, Water) | (Water, Fire) => {
-                                fire_water(&mut spawned, &assets, &mut atlases);
-                                //steam geyser - shoves away
-                            }
-                            (Fire, Wind) | (Wind, Fire) => {
-                                fire_wind(&mut spawned, &assets, &mut atlases);
-                                //sets things on fire (big area, dot)
-                            }
-                            (Fire, Lightning) | (Lightning, Fire) => {
-                                fire_lightning(&mut spawned, &assets, &mut atlases);
-                                //delayed explosion, sticks to 1 enemy
-                            }
-                            (Fire, Earth) | (Earth, Fire) => {
-                                fire_earth(&mut spawned, &assets, &mut atlases);
-                                //Damaging lava puddle
-                            }
-                            (Water, Wind) | (Wind, Water) => {
-                                water_wind(&mut spawned, &assets, &mut atlases);
-                                //homing rain cloud - slows enemies under it
-                            }
-                            (Water, Lightning) | (Lightning, Water) => {
-                                water_lightning(&mut spawned, &assets, &mut atlases);
-                                //Affected enemies shoot lightning at nearby enemies
-                            }
-                            (Water, Earth) | (Earth, Water) => {
-                                water_earth(&mut spawned, &assets, &mut atlases, velocity);
-                                //grows vines on the ground, damaging enemies that walk through
-                            }
-                            (Wind, Lightning) | (Lightning, Wind) => {
-                                wind_lightning(&mut spawned, &assets, &mut atlases);
-                                //homing storm cloud
-                            }
-                            (Wind, Earth) | (Earth, Wind) => {
-                                wind_earth(&mut spawned, &assets, &mut atlases);
-                                //dust storm - blinds
-                            }
-                            (Lightning, Earth) | (Earth, Lightning) => {
-                                lightning_earth(&mut spawned, &assets, &mut atlases, rotation);
-                                //lightning strikes at location, sparks go through ground back to player
-                            }
-                        }
                     }
                 }
                 _ => (),
             }
         }
+
+        for (entity, &potion_type, &transform, &velocity, &position) in &q_potion {
+            let direction = position.0 - transform.translation.truncate();
+            if velocity.linvel.dot(direction) <= 0.0 {
+                event_writer.send(PotionExplode {
+                    potion_type,
+                    transform,
+                    velocity,
+                });
+                cmd.entity(entity).despawn_recursive();
+            }
+        }
     }
 
+    fn potion_effect(
+        mut cmd: Commands,
+        mut event_reader: EventReader<PotionExplode>,
+        assets: Res<AssetServer>,
+        mut atlases: ResMut<Assets<TextureAtlas>>,
+    ) {
+        for event in event_reader.iter() {
+            let transform = event.transform;
+            let potion_type = &event.potion_type;
+            let velocity = event.velocity;
+            let rotation = transform.rotation.to_euler(EulerRot::XYZ).2;
+            let mut spawned = cmd.spawn_bundle(SpatialBundle {
+                transform: Transform {
+                    rotation: Quat::IDENTITY,
+                    ..transform
+                },
+                ..default()
+            });
+
+            {
+                use Element::*;
+                match (potion_type.0, potion_type.1) {
+                    (Fire, Fire) => {
+                        fire_fire(&mut spawned, &assets, &mut atlases);
+                    }
+                    (Water, Water) => {
+                        water_water(&mut spawned, &assets, &mut atlases, &velocity);
+                    }
+                    (Wind, Wind) => {
+                        wind_wind(&mut spawned, &assets, &mut atlases);
+                    }
+                    (Lightning, Lightning) => {
+                        lightning_lightning(&mut spawned, &assets, &mut atlases);
+                    }
+                    (Earth, Earth) => {
+                        earth_earth(&mut spawned, &assets, &mut atlases);
+                        //big rock just sprouts and blocks stuff
+                    }
+                    (Fire, Water) | (Water, Fire) => {
+                        fire_water(&mut spawned, &assets, &mut atlases);
+                        //steam geyser - shoves away
+                    }
+                    (Fire, Wind) | (Wind, Fire) => {
+                        fire_wind(&mut spawned, &assets, &mut atlases);
+                        //sets things on fire (big area, dot)
+                    }
+                    (Fire, Lightning) | (Lightning, Fire) => {
+                        fire_lightning(&mut spawned, &assets, &mut atlases);
+                        //delayed explosion, sticks to 1 enemy
+                    }
+                    (Fire, Earth) | (Earth, Fire) => {
+                        fire_earth(&mut spawned, &assets, &mut atlases);
+                        //Damaging lava puddle
+                    }
+                    (Water, Wind) | (Wind, Water) => {
+                        water_wind(&mut spawned, &assets, &mut atlases);
+                        //homing rain cloud - slows enemies under it
+                    }
+                    (Water, Lightning) | (Lightning, Water) => {
+                        water_lightning(&mut spawned, &assets, &mut atlases);
+                        //Affected enemies shoot lightning at nearby enemies
+                    }
+                    (Water, Earth) | (Earth, Water) => {
+                        water_earth(&mut spawned, &assets, &mut atlases, &velocity);
+                        //grows vines on the ground, damaging enemies that walk through
+                    }
+                    (Wind, Lightning) | (Lightning, Wind) => {
+                        wind_lightning(&mut spawned, &assets, &mut atlases);
+                        //homing storm cloud
+                    }
+                    (Wind, Earth) | (Earth, Wind) => {
+                        wind_earth(&mut spawned, &assets, &mut atlases);
+                        //dust storm - blinds
+                    }
+                    (Lightning, Earth) | (Earth, Lightning) => {
+                        lightning_earth(&mut spawned, &assets, &mut atlases, rotation);
+                        //lightning strikes at location, sparks go through ground back to player
+                    }
+                }
+            }
+        }
+    }
     fn update_counter(
         mut q_counter: Query<(&mut TextureAtlasSprite, &EssenceCounter)>,
         amounts: Res<EssenceCounts>,
@@ -995,9 +1031,11 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::manage_brew_state.run_in_state(GameState::InGame))
             .add_system(Self::update_brew.run_in_state(GameState::InGame))
             .add_system(Self::potion_explode.run_in_state(GameState::InGame))
+            .add_system(Self::potion_effect.run_in_state(GameState::InGame))
             .add_system(Self::update_counter.run_in_state(GameState::InGame))
             .init_resource::<PotionBrewData>()
             .init_resource::<PotionBrewState>()
-            .add_event::<ThrowPotion>();
+            .add_event::<ThrowPotion>()
+            .add_event::<PotionExplode>();
     }
 }

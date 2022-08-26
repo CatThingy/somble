@@ -240,7 +240,7 @@ impl Plugin {
             rapier_cfg.timestep_mode = TimestepMode::Variable {
                 max_dt: 1.0 / 60.0,
                 time_scale: **time_scale,
-                substeps: 1,
+                substeps: 4,
             };
         }
     }

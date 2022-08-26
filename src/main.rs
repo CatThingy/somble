@@ -5,6 +5,7 @@ mod health;
 mod hitbox;
 mod homing;
 mod level;
+mod main_menu;
 mod player;
 mod potion;
 mod status;
@@ -25,7 +26,7 @@ pub struct Enemy;
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub enum GameState {
-    // MainMenu,
+    MainMenu,
     InGame,
 }
 
@@ -45,10 +46,10 @@ fn main() {
             ..default()
         })
         .insert_resource(ImageSettings::default_nearest())
-        .add_loopless_state(GameState::InGame)
+        .add_loopless_state(GameState::MainMenu)
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
-        .add_plugin(RapierDebugRenderPlugin::default())
+        //.add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::default())
         .add_plugin(LdtkPlugin)
         .add_plugin(utils::Plugin)
@@ -61,6 +62,7 @@ fn main() {
         .add_plugin(status::Plugin)
         .add_plugin(homing::Plugin)
         .add_plugin(essence::Plugin)
+        .add_plugin(main_menu::Plugin)
         .add_startup_system(init)
         .run();
 }

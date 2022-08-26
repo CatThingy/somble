@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut};
+use std::ops::Index;
 
 use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;

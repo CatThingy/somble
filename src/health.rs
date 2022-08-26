@@ -42,6 +42,7 @@ impl Plugin {
                     health.current = health.max;
                 } else if health.current < 0.0 {
                     cmd.entity(entity).remove::<Health>().insert(Dead);
+                    info!("yeah that's dead");
                 }
             }
         }

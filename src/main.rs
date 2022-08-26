@@ -3,6 +3,7 @@ mod enemy;
 mod essence;
 mod health;
 mod hitbox;
+mod hitstun;
 mod homing;
 mod level;
 mod main_menu;
@@ -63,6 +64,7 @@ fn main() {
         .add_plugin(homing::Plugin)
         .add_plugin(essence::Plugin)
         .add_plugin(main_menu::Plugin)
+        .add_plugin(hitstun::Plugin)
         .add_startup_system(init)
         .run();
 }

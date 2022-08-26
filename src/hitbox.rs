@@ -5,7 +5,7 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::{
-    enemy::HitstunTimer, health::HealthChange, status::Effect, utils::TimeScale, Enemy, GameState,
+    health::HealthChange, hitstun::HitstunTimer, status::Effect, utils::TimeScale, Enemy, GameState,
 };
 
 #[derive(Component)]

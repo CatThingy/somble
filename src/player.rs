@@ -5,8 +5,8 @@ use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::enemy::HitstunTimer;
 use crate::essence::Essence;
+use crate::hitstun::HitstunTimer;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
 use crate::utils::{MousePosition, TimeScale};
 use crate::{consts::*, Element, Enemy, GameState};
@@ -35,10 +35,11 @@ pub struct PlayerBundle {
     velocity: Velocity,
     collider: Collider,
     anim_timer: AnimationTimer,
-    #[bundle]
-    spritesheet: SpriteSheetBundle,
     collision_group: CollisionGroups,
     locked: LockedAxes,
+    hitstun: HitstunTimer,
+    #[bundle]
+    spritesheet: SpriteSheetBundle,
 }
 
 impl LdtkEntity for PlayerBundle {
@@ -77,6 +78,7 @@ impl LdtkEntity for PlayerBundle {
                 filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ESSENCE_COLLISION_GROUP,
             },
             locked: LockedAxes::ROTATION_LOCKED,
+            hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),
         }
     }
 }

@@ -11,16 +11,16 @@ use iyes_loopless::prelude::*;
 use ordered_float::OrderedFloat;
 use pathfinding::directed::astar::astar;
 
+use crate::health::Dead;
 use crate::health::Health;
+use crate::hitstun::HitstunTimer;
 use crate::level::WalkableTiles;
 use crate::status::Blinded;
 use crate::status::Slowed;
 use crate::utils::TimeScale;
+use crate::utils::UniformAnim;
 use crate::Element;
 use crate::{consts::*, player::Player, Enemy, GameState};
-
-#[derive(Component, Deref, DerefMut, Debug)]
-pub struct HitstunTimer(pub Timer);
 
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct AttackTimer(Timer);
@@ -74,7 +74,7 @@ impl LdtkEntity for ElementalBundle {
     ) -> Self {
         let elemental_texture = asset_server.load("elemental.png");
         let elemental_atlas =
-            TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 10, 1);
+            TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 14, 1);
         let texture_atlas = texture_atlases.add(elemental_atlas);
 
         let mut element = None;
@@ -622,14 +622,8 @@ impl Plugin {
         }
     }
 
-    fn tick_hitstun(
-        mut q_enemy: Query<(&mut HitstunTimer, &mut AnimationTimer), With<Enemy>>,
-        time: Res<Time>,
-        time_scale: Res<TimeScale>,
-    ) {
-        for (mut timer, mut anim) in &mut q_enemy {
-            timer.tick(time.delta().mul_f32(**time_scale));
-
+    fn hitstun(mut q_enemy: Query<(&HitstunTimer, &mut AnimationTimer), With<Enemy>>) {
+        for (timer, mut anim) in &mut q_enemy {
             if timer.finished() && anim.paused() {
                 anim.unpause();
             } else if !timer.finished() && !anim.paused() {
@@ -637,16 +631,43 @@ impl Plugin {
             }
         }
     }
+
+    fn start_die(
+        mut cmd: Commands,
+        mut q_enemy: Query<(Entity, &mut TextureAtlasSprite), (With<Enemy>, Added<Dead>)>,
+    ) {
+        for (entity, mut sprite) in &mut q_enemy {
+            sprite.index = ELEMENTAL_DEATH_ANIM_OFFSET;
+            cmd.entity(entity)
+                .remove::<Collider>()
+                .remove::<RigidBody>()
+                .remove::<EnemyState>()
+                .remove::<AnimationTimer>()
+                .insert(UniformAnim(Timer::from_seconds(0.1, true)));
+        }
+    }
+    fn die(
+        mut cmd: Commands,
+        q_enemy: Query<(Entity, &TextureAtlasSprite), (With<Enemy>, With<Dead>)>,
+    ) {
+        for (entity, anim) in &q_enemy {
+            if anim.index == ELEMENTAL_DEATH_ANIM_OFFSET + ELEMENTAL_DEATH_ANIM_FRAMES - 1 {
+                cmd.entity(entity).despawn_recursive()
+            }
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::tick_hitstun.run_in_state(GameState::InGame))
+        app.add_system(Self::hitstun.run_in_state(GameState::InGame))
             .add_system(Self::update_state.run_in_state(GameState::InGame))
             .add_system(Self::movement.run_in_state(GameState::InGame))
             .add_system(Self::tick_attack.run_in_state(GameState::InGame))
             .add_system(Self::attack.run_in_state(GameState::InGame))
             .add_system(Self::anim.run_in_state(GameState::InGame))
+            .add_system(Self::start_die.run_in_state(GameState::InGame))
+            .add_system(Self::die.run_in_state(GameState::InGame))
             .register_ldtk_entity::<ElementalBundle>("Elemental");
     }
 }

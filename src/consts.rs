@@ -39,6 +39,9 @@ pub const ELEMENTAL_ATTACK_ANIM_OFFSET: usize = 3;
 pub const ELEMENTAL_ATTACK_ANIM_FRAMES: usize = 7;
 pub const ELEMENTAL_ATTACK_EMIT_FRAME: usize = 7;
 
+pub const ELEMENTAL_DEATH_ANIM_OFFSET: usize = 10;
+pub const ELEMENTAL_DEATH_ANIM_FRAMES: usize = 4;
+
 pub const FIRE_ELEMENTAL_SPEED: f32 = 50.0;
 pub const FIRE_ELEMENTAL_HEALTH: f32 = 100.0;
 pub const FIRE_ELEMENTAL_AGGRO_RANGE: f32 = 100.0;

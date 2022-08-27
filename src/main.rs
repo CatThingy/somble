@@ -51,7 +51,7 @@ fn main() {
         .add_loopless_state(GameState::MainMenu)
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
-        //.add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::default())
         .add_plugin(LdtkPlugin)
         .add_plugin(utils::Plugin)

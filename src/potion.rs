@@ -1,4 +1,4 @@
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{ecs::system::EntityCommands, prelude::*, sprite::Anchor};
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
@@ -48,6 +48,7 @@ pub struct PotionBundle {
     collision_group: CollisionGroups,
     active_events: ActiveEvents,
     explode_pos: ExplodePosition,
+    sensor: Sensor,
 }
 
 #[derive(Default)]
@@ -81,10 +82,10 @@ fn fire_fire(
             TextureAtlasSprite::default(),
             {
                 let tex = assets.load("fire_fire.png");
-                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(64.0), 6, 1))
             },
-            UniformAnim(Timer::from_seconds(0.1, true)),
-            DespawnTimer(Timer::from_seconds(0.5, false)),
+            UniformAnim(Timer::from_seconds(0.05, true)),
+            DespawnTimer(Timer::from_seconds(0.3, false)),
         ))
         .with_children(|parent| {
             parent
@@ -112,8 +113,9 @@ fn water_water(
     atlases: &mut ResMut<Assets<TextureAtlas>>,
     velocity: &Velocity,
 ) {
-    //TODO: art
     let direction = velocity.linvel.normalize();
+    let tex = assets.load("water_water.png");
+    let atlas = atlases.add(TextureAtlas::from_grid(tex, Vec2::new(8.0, 16.0), 12, 1));
     spawned
         .insert_bundle((
             Velocity {
@@ -146,6 +148,23 @@ fn water_water(
                     Hitbox,
                     DirectedForce::new(direction * WATER_WATER_FORCE),
                 ));
+
+            for i in -8..=8 {
+                parent
+                    .spawn_bundle(SpriteSheetBundle {
+                        texture_atlas: atlas.clone(),
+                        transform: Transform {
+                            translation: Vec3::new(
+                                -direction.y * 4.0 * i as f32,
+                                direction.x * 4.0 * i as f32,
+                                -direction.x * 0.1e-5 * i as f32,
+                            ),
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .insert(UniformAnim(Timer::from_seconds(0.05, true)));
+            }
         });
 }
 
@@ -154,15 +173,14 @@ fn wind_wind(
     assets: &Res<AssetServer>,
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
-    //TODO: art
     spawned
         .insert_bundle((
-            //     TextureAtlasSprite::default(),
-            //     {
-            //         let tex = assets.load("fire_fire.png");
-            //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            //     },
-            //     UniformAnim(Timer::from_seconds(0.1, true)),
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("wind_wind.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(64.0), 4, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
             DespawnTimer(Timer::from_seconds(WIND_WIND_DURATION, false)),
         ))
         .with_children(|parent| {
@@ -196,13 +214,16 @@ fn lightning_lightning(
 ) {
     spawned
         .insert_bundle((
-            // TextureAtlasSprite::default(),
-            // {
-            //     let tex = assets.load("fire_fire.png");
-            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            // },
-            // UniformAnim(Timer::from_seconds(0.1, true)),
-            // DespawnTimer(Timer::from_seconds(0.5, false)),
+            TextureAtlasSprite {
+                anchor: Anchor::BottomCenter,
+                ..default()
+            },
+            {
+                let tex = assets.load("lightning_lightning.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::new(16.0, 64.0), 4, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
+            DespawnTimer(Timer::from_seconds(0.25, false)),
         ))
         .with_children(|parent| {
             parent
@@ -230,13 +251,13 @@ fn earth_earth(
 ) {
     spawned
         .insert_bundle((
-            // TextureAtlasSprite::default(),
-            // {
-            //     let tex = assets.load("fire_fire.png");
-            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            // },
-            // UniformAnim(Timer::from_seconds(0.1, true)),
-            // DespawnTimer(Timer::from_seconds(0.5, false)),
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("earth_earth.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 40, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
+            DespawnTimer(Timer::from_seconds(EARTH_EARTH_DURATION, false)),
         ))
         .with_children(|parent| {
             parent
@@ -250,7 +271,6 @@ fn earth_earth(
                             | PLAYER_ATTACK_COLLISION_GROUP
                             | ENEMY_ATTACK_COLLISION_GROUP,
                     },
-                    DespawnTimer(Timer::from_seconds(EARTH_EARTH_DURATION, false)),
                 ));
         });
 }
@@ -263,12 +283,12 @@ fn fire_water(
     //TODO: art
     spawned
         .insert_bundle((
-            //     TextureAtlasSprite::default(),
-            //     {
-            //         let tex = assets.load("fire_fire.png");
-            //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            //     },
-            //     UniformAnim(Timer::from_seconds(0.1, true)),
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("fire_water.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(64.0), 5, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.1, true)),
             DespawnTimer(Timer::from_seconds(FIRE_WATER_DURATION, false)),
         ))
         .with_children(|parent| {
@@ -302,13 +322,13 @@ fn fire_wind(
 ) {
     spawned
         .insert_bundle((
-            // TextureAtlasSprite::default(),
-            // {
-            //     let tex = assets.load("fire_fire.png");
-            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            // },
-            // UniformAnim(Timer::from_seconds(0.1, true)),
-            // DespawnTimer(Timer::from_seconds(0.5, false)),
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("fire_wind.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(96.0), 3, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
+            DespawnTimer(Timer::from_seconds(0.15, false)),
         ))
         .with_children(|parent| {
             parent
@@ -323,7 +343,7 @@ fn fire_wind(
                     Sensor,
                     Hitbox,
                     StatusEffect(Effect::OnFire),
-                    DespawnTimer(Timer::from_seconds(FIRE_WIND_DURATION, false)),
+                    DespawnTimer(Timer::from_seconds(0.5, false)),
                 ));
         });
 }
@@ -335,13 +355,13 @@ fn fire_lightning(
 ) {
     spawned
         .insert_bundle((
-            // TextureAtlasSprite::default(),
-            // {
-            //     let tex = assets.load("fire_fire.png");
-            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            // },
-            // UniformAnim(Timer::from_seconds(0.1, true)),
-            // DespawnTimer(Timer::from_seconds(0.5, false)),
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("fire_lightning.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(16.0), 2, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.1, true)),
+            DespawnTimer(Timer::from_seconds(0.2, false)),
         ))
         .with_children(|parent| {
             parent
@@ -367,15 +387,15 @@ fn fire_earth(
     atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
     spawned
-        // .insert_bundle((
-        //     TextureAtlasSprite::default(),
-        //     {
-        //         let tex = assets.load("fire_fire.png");
-        //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-        //     },
-        //     UniformAnim(Timer::from_seconds(0.1, true)),
-        //     DespawnTimer(Timer::from_seconds(0.5, false)),
-        // ))
+        .insert_bundle((
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("fire_earth.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(96.0), 14, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.1, true)),
+            DespawnTimer(Timer::from_seconds(FIRE_EARTH_DURATION, false)),
+        ))
         .with_children(|parent| {
             parent
                 .spawn_bundle(SpatialBundle::default())
@@ -389,7 +409,6 @@ fn fire_earth(
                     Sensor,
                     Hitbox,
                     DamagePeriodic::new(FIRE_EARTH_DAMAGE, Falloff::none(), FIRE_EARTH_TICK),
-                    DespawnTimer(Timer::from_seconds(FIRE_EARTH_DURATION, false)),
                 ));
         });
 }
@@ -413,6 +432,12 @@ fn water_wind(
                 memberships: PLAYER_ATTACK_COLLISION_GROUP,
                 filters: ENEMY_COLLISION_GROUP,
             },
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("water_wind.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(64.0), 7, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
             DespawnTimer(Timer::from_seconds(WATER_WIND_DURATION, false)),
         ))
         .with_children(|parent| {
@@ -439,13 +464,13 @@ fn water_lightning(
 ) {
     spawned
         .insert_bundle((
-            // TextureAtlasSprite::default(),
-            // {
-            //     let tex = assets.load("fire_fire.png");
-            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            // },
-            // UniformAnim(Timer::from_seconds(0.1, true)),
-            // DespawnTimer(Timer::from_seconds(0.5, false)),
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("water_lightning.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(96.0), 3, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
+            DespawnTimer(Timer::from_seconds(0.15, false)),
         ))
         .with_children(|parent| {
             parent
@@ -472,16 +497,13 @@ fn water_earth(
     velocity: &Velocity,
 ) {
     let direction = velocity.linvel.normalize();
+    let tex = assets.load("water_earth.png");
+    let atlas = atlases.add(TextureAtlas::from_grid(tex, Vec2::new(16.0, 16.0), 15, 1));
     spawned
-        // .insert_bundle((
-        //     TextureAtlasSprite::default(),
-        //     {
-        //         let tex = assets.load("fire_fire.png");
-        //         atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-        //     },
-        //     UniformAnim(Timer::from_seconds(0.1, true)),
-        //     DespawnTimer(Timer::from_seconds(0.5, false)),
-        // ))
+        .insert(DespawnTimer(Timer::from_seconds(
+            WATER_EARTH_DURATION,
+            false,
+        )))
         .with_children(|parent| {
             parent
                 .spawn_bundle(SpatialBundle {
@@ -506,8 +528,28 @@ fn water_earth(
                     Hitbox,
                     Hitstun(WATER_EARTH_HITSTUN),
                     DamagePeriodic::new(WATER_EARTH_DAMAGE, Falloff::none(), WATER_EARTH_TICK),
-                    DespawnTimer(Timer::from_seconds(WATER_EARTH_DURATION, false)),
                 ));
+
+            for i in 0..=1 {
+                for j in 1..=16 {
+                    parent
+                        .spawn_bundle(SpriteSheetBundle {
+                            texture_atlas: atlas.clone(),
+                            transform: Transform {
+                                translation: Vec3::new(
+                                    direction.x * 6.0 * j as f32
+                                        - direction.y * 8.0 * (i as f32 - 0.5),
+                                    direction.y * 6.0 * j as f32
+                                        + direction.x * 8.0 * (i as f32 - 0.5),
+                                    direction.y * 0.1e-5 * j as f32,
+                                ),
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .insert(UniformAnim(Timer::from_seconds(0.1, true)));
+                }
+            }
         });
 }
 
@@ -530,6 +572,12 @@ fn wind_lightning(
                 memberships: PLAYER_ATTACK_COLLISION_GROUP,
                 filters: ENEMY_COLLISION_GROUP,
             },
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("wind_lightning.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(64.0), 6, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
             DespawnTimer(Timer::from_seconds(WIND_LIGHTNING_DURATION, false)),
         ))
         .with_children(|parent| {
@@ -544,7 +592,11 @@ fn wind_lightning(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
-                    StatusEffect(Effect::Shocked),
+                    DamagePeriodic::new(
+                        WIND_LIGHTNING_DAMAGE,
+                        Falloff::none(),
+                        WIND_LIGHTNING_TICK,
+                    ),
                 ));
         });
 }
@@ -556,13 +608,13 @@ fn wind_earth(
 ) {
     spawned
         .insert_bundle((
-            // TextureAtlasSprite::default(),
-            // {
-            //     let tex = assets.load("fire_fire.png");
-            //     atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
-            // },
-            // UniformAnim(Timer::from_seconds(0.1, true)),
-            // DespawnTimer(Timer::from_seconds(0.5, false)),
+            TextureAtlasSprite::default(),
+            {
+                let tex = assets.load("wind_earth.png");
+                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(96.0), 3, 1))
+            },
+            UniformAnim(Timer::from_seconds(0.05, true)),
+            DespawnTimer(Timer::from_seconds(0.15, false)),
         ))
         .with_children(|parent| {
             parent
@@ -588,6 +640,8 @@ fn lightning_earth(
     atlases: &mut ResMut<Assets<TextureAtlas>>,
     rotation: f32,
 ) {
+    let tex = assets.load("lightning_earth.png");
+    let atlas = atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(4.0), 4, 1));
     //TODO: spawned just has initial strike art
     for i in 0..LIGHTNING_EARTH_COUNT {
         let rotation = rotation + (std::f32::consts::TAU / LIGHTNING_EARTH_COUNT as f32) * i as f32;
@@ -595,6 +649,9 @@ fn lightning_earth(
             parent
                 .spawn_bundle(SpatialBundle::default())
                 .insert_bundle((
+                    TextureAtlasSprite::default(),
+                    atlas.clone(),
+                    UniformAnim(Timer::from_seconds(0.05, true)),
                     Velocity {
                         linvel: Vec2::from_angle(rotation) * LIGHTNING_EARTH_SPEED,
                         angvel: 0.0,
@@ -756,6 +813,7 @@ impl Plugin {
                 },
                 active_events: ActiveEvents::COLLISION_EVENTS,
                 explode_pos: ExplodePosition(mouse_pos.truncate()),
+                sensor: Sensor,
             });
         }
     }

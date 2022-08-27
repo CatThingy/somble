@@ -32,6 +32,12 @@ pub enum GameState {
     InGame,
 }
 
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub enum PauseState {
+    Paused,
+    Unpaused,
+}
+
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Element {
     Fire,
@@ -49,6 +55,7 @@ fn main() {
         })
         .insert_resource(ImageSettings::default_nearest())
         .add_loopless_state(GameState::MainMenu)
+        .add_loopless_state(PauseState::Unpaused)
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
         .add_plugin(RapierDebugRenderPlugin::default())

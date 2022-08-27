@@ -6,7 +6,7 @@ use bevy_ecs_ldtk::utils::translation_to_grid_coords;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::consts::*;
+use crate::{consts::*, PauseState};
 use crate::player::Player;
 use crate::GameState;
 
@@ -44,6 +44,8 @@ impl LdtkIntCell for WallBundle {
         default()
     }
 }
+#[derive(Component)]
+pub struct NotFromLevel;
 
 #[derive(Component, Default)]
 pub struct Walkable;
@@ -131,12 +133,14 @@ impl Plugin {
                     if let Ok(_) = q_stairs.get(*e1) {
                         if let Ok(_) = q_player.get(*e2) {
                             event_writer.send(NextLevel);
+                            return;
                         } else {
                             continue;
                         }
                     } else if let Ok(_) = q_stairs.get(*e2) {
                         if let Ok(_) = q_player.get(*e1) {
                             event_writer.send(NextLevel);
+                            return;
                         } else {
                             continue;
                         }
@@ -153,38 +157,61 @@ impl Plugin {
         mut cmd: Commands,
         event_reader: EventReader<NextLevel>,
         mut current_level: ResMut<CurrentLevel>,
+        q_despawn: Query<Entity, With<NotFromLevel>>,
     ) {
         if !event_reader.is_empty() {
             current_level.0 += 1;
             cmd.insert_resource(LevelSelection::Index(current_level.0));
+            for entity in &q_despawn {
+                cmd.entity(entity).despawn_recursive();
+            }
         }
     }
 
     fn restart_level(
         mut cmd: Commands,
         event_reader: EventReader<RestartLevel>,
-        current_level: Res<CurrentLevel>,
+        q_level: Query<Entity, With<Handle<LdtkLevel>>>,
+        q_despawn: Query<Entity, With<NotFromLevel>>,
     ) {
         if !event_reader.is_empty() {
-            cmd.insert_resource(LevelSelection::Index(current_level.0));
+            cmd.entity(q_level.single()).insert(Respawn);
+            for entity in &q_despawn {
+                cmd.entity(entity).despawn_recursive();
+            }
         }
     }
 
     fn reset(
         mut cmd: Commands,
-        event_reader: EventReader<NextLevel>,
+        event_reader: EventReader<Reset>,
         mut current_level: ResMut<CurrentLevel>,
     ) {
         if !event_reader.is_empty() {
-            current_level.0 += 1;
+            current_level.0 = 0;
             cmd.insert_resource(LevelSelection::Index(current_level.0));
         }
+    }
+
+    fn cleanup(
+        mut cmd: Commands,
+        q_world: Query<Entity, With<Handle<LdtkAsset>>>,
+        q_despawn: Query<Entity, With<NotFromLevel>>,
+    ) {
+        cmd.entity(q_world.single()).despawn_recursive();
+        for entity in &q_despawn {
+            cmd.entity(entity).despawn_recursive();
+        }
+        cmd.insert_resource(NextState(PauseState::Unpaused));
+        cmd.insert_resource(LevelSelection::Index(0));
+        cmd.insert_resource(CurrentLevel(0));
     }
 }
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_enter_system(GameState::InGame, Self::init)
+            .add_exit_system(GameState::InGame, Self::cleanup)
             .add_system(Self::register_walkable.run_in_state(GameState::InGame))
             .add_system(Self::update_stairs.run_in_state(GameState::InGame))
             .add_system(Self::next_level.run_in_state(GameState::InGame))

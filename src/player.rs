@@ -8,6 +8,7 @@ use iyes_loopless::prelude::*;
 use crate::essence::Essence;
 use crate::health::Health;
 use crate::hitstun::HitstunTimer;
+use crate::level::NotFromLevel;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
 use crate::utils::{MousePosition, TimeScale};
 use crate::{consts::*, Element, Enemy, GameState};
@@ -306,7 +307,7 @@ impl Plugin {
                     transform: transform.compute_transform(),
                     ..default()
                 })
-                .insert_bundle((*element, Essence));
+                .insert_bundle((*element, Essence, NotFromLevel));
                 hitstun_timer.set_duration(Duration::from_secs_f32(PLAYER_KICK_HITSTUN_SECS));
                 hitstun_timer.reset();
             }

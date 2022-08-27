@@ -10,6 +10,7 @@ use crate::{
         RadialImpulse, StatusEffect,
     },
     homing::Homing,
+    level::NotFromLevel,
     player::Player,
     status::Effect,
     utils::{
@@ -49,6 +50,7 @@ pub struct PotionBundle {
     active_events: ActiveEvents,
     explode_pos: ExplodePosition,
     sensor: Sensor,
+    nfl: NotFromLevel,
 }
 
 #[derive(Default)]
@@ -814,6 +816,7 @@ impl Plugin {
                 active_events: ActiveEvents::COLLISION_EVENTS,
                 explode_pos: ExplodePosition(mouse_pos.truncate()),
                 sensor: Sensor,
+                nfl: NotFromLevel,
             });
         }
     }
@@ -999,6 +1002,7 @@ impl Plugin {
                 },
                 ..default()
             });
+            spawned.insert(NotFromLevel);
 
             {
                 use Element::*;

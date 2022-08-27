@@ -32,8 +32,8 @@ impl Plugin {
                 image: UiImage(assets.load("play_button.png")),
                 style: Style {
                     size: Size {
-                        width: Val::Px(256.0),
-                        height: Val::Px(128.0),
+                        width: Val::Px(128.0),
+                        height: Val::Px(64.0),
                     },
                     ..default()
                 },

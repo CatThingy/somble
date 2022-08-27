@@ -18,6 +18,7 @@ use crate::hitbox::DamagePeriodic;
 use crate::hitbox::Falloff;
 use crate::hitbox::Hitbox;
 use crate::hitstun::HitstunTimer;
+use crate::level::NotFromLevel;
 use crate::level::WalkableTiles;
 use crate::status::Blinded;
 use crate::status::Slowed;
@@ -355,6 +356,7 @@ impl Plugin {
                             Hitbox,
                             DamageOnce::new(10.0, Falloff::none()),
                             DestroyOnHit,
+                            NotFromLevel,
                         ));
                     }
                     Element::Water => {
@@ -386,6 +388,7 @@ impl Plugin {
                                 Hitbox,
                                 DespawnTimer(Timer::from_seconds(5.0, false)),
                                 Spiral { rate: 2.0 },
+                                NotFromLevel,
                             ));
                         }
                     }
@@ -412,6 +415,7 @@ impl Plugin {
                             Sensor,
                             Hitbox,
                             DespawnTimer(Timer::from_seconds(0.05, false)),
+                            NotFromLevel,
                         ));
                     }
                     Element::Lightning => {
@@ -435,6 +439,7 @@ impl Plugin {
                             },
                             ActiveEvents::COLLISION_EVENTS,
                             DespawnTimer(Timer::from_seconds(5.0, false)),
+                            NotFromLevel,
                         ))
                         .with_children(|parent| {
                             parent.spawn_bundle((
@@ -473,6 +478,7 @@ impl Plugin {
                             Sensor,
                             Hitbox,
                             DespawnTimer(Timer::from_seconds(0.05, false)),
+                            NotFromLevel,
                         ));
                     }
                 }

@@ -77,7 +77,10 @@ impl LdtkEntity for PlayerBundle {
             },
             collision_group: CollisionGroups {
                 memberships: PLAYER_COLLISION_GROUP,
-                filters: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ESSENCE_COLLISION_GROUP | ENEMY_ATTACK_COLLISION_GROUP,
+                filters: ENEMY_COLLISION_GROUP
+                    | WALL_COLLISION_GROUP
+                    | ESSENCE_COLLISION_GROUP
+                    | ENEMY_ATTACK_COLLISION_GROUP,
             },
             locked: LockedAxes::ROTATION_LOCKED,
             hitstun: HitstunTimer(Timer::from_seconds(0.0, false)),

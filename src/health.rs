@@ -18,7 +18,7 @@ impl Health {
     }
     pub fn percentage(&self) -> f32 {
         self.current / self.max
-    } 
+    }
 }
 
 #[derive(Component)]

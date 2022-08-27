@@ -77,7 +77,6 @@ impl Plugin {
 
         bar.size.width = Val::Percent(player_health.percentage() * 100.0);
     }
-
 }
 
 impl bevy::app::Plugin for Plugin {

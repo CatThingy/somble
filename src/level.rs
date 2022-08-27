@@ -7,6 +7,7 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::consts::*;
+use crate::player::Player;
 use crate::GameState;
 
 #[derive(Bundle)]
@@ -52,8 +53,50 @@ pub struct WalkableBundle {
     walkable: Walkable,
 }
 
+#[derive(Bundle, LdtkEntity)]
+pub struct StairEntity {
+    #[bundle]
+    #[sprite_sheet_bundle("minimal.png", 16.0, 16.0, 4, 5, 0.0, 0.0, 8)]
+    sprite_sheet: SpriteSheetBundle,
+    #[bundle]
+    stairs: StairBundle,
+}
+
+#[derive(Component, Default)]
+pub struct Stairs;
+
+#[derive(Bundle)]
+struct StairBundle {
+    collider: Collider,
+    sensor: Sensor,
+    stairs: Stairs,
+    groups: CollisionGroups,
+    events: ActiveEvents,
+}
+
+impl Default for StairBundle {
+    fn default() -> Self {
+        StairBundle {
+            collider: Collider::cuboid(8.0, 8.0),
+            sensor: Sensor,
+            stairs: Stairs,
+            groups: CollisionGroups {
+                memberships: WALL_COLLISION_GROUP,
+                filters: PLAYER_COLLISION_GROUP,
+            },
+            events: ActiveEvents::COLLISION_EVENTS,
+        }
+    }
+}
+
 #[derive(Default, Deref, DerefMut)]
 pub struct WalkableTiles(HashSet<IVec2>);
+
+pub struct CurrentLevel(pub usize);
+
+pub struct NextLevel;
+pub struct RestartLevel;
+pub struct Reset;
 
 pub struct Plugin;
 
@@ -75,15 +118,86 @@ impl Plugin {
             walkables.insert(tile_pos.into());
         }
     }
+
+    fn update_stairs(
+        mut event_reader: EventReader<CollisionEvent>,
+        mut event_writer: EventWriter<NextLevel>,
+        q_player: Query<(), With<Player>>,
+        q_stairs: Query<(), With<Stairs>>,
+    ) {
+        for event in event_reader.iter() {
+            match event {
+                CollisionEvent::Started(e1, e2, _) => {
+                    if let Ok(_) = q_stairs.get(*e1) {
+                        if let Ok(_) = q_player.get(*e2) {
+                            event_writer.send(NextLevel);
+                        } else {
+                            continue;
+                        }
+                    } else if let Ok(_) = q_stairs.get(*e2) {
+                        if let Ok(_) = q_player.get(*e1) {
+                            event_writer.send(NextLevel);
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
+    fn next_level(
+        mut cmd: Commands,
+        event_reader: EventReader<NextLevel>,
+        mut current_level: ResMut<CurrentLevel>,
+    ) {
+        if !event_reader.is_empty() {
+            current_level.0 += 1;
+            cmd.insert_resource(LevelSelection::Index(current_level.0));
+        }
+    }
+
+    fn restart_level(
+        mut cmd: Commands,
+        event_reader: EventReader<RestartLevel>,
+        current_level: Res<CurrentLevel>,
+    ) {
+        if !event_reader.is_empty() {
+            cmd.insert_resource(LevelSelection::Index(current_level.0));
+        }
+    }
+
+    fn reset(
+        mut cmd: Commands,
+        event_reader: EventReader<NextLevel>,
+        mut current_level: ResMut<CurrentLevel>,
+    ) {
+        if !event_reader.is_empty() {
+            current_level.0 += 1;
+            cmd.insert_resource(LevelSelection::Index(current_level.0));
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_enter_system(GameState::InGame, Self::init)
             .add_system(Self::register_walkable.run_in_state(GameState::InGame))
+            .add_system(Self::update_stairs.run_in_state(GameState::InGame))
+            .add_system(Self::next_level.run_in_state(GameState::InGame))
+            .add_system(Self::restart_level.run_in_state(GameState::InGame))
+            .add_system(Self::reset.run_in_state(GameState::InGame))
             .insert_resource(LevelSelection::Index(0))
+            .insert_resource(CurrentLevel(0))
             .init_resource::<WalkableTiles>()
             .register_ldtk_int_cell::<WallBundle>(1)
-            .register_ldtk_int_cell::<WalkableBundle>(2);
+            .register_ldtk_int_cell::<WalkableBundle>(2)
+            .register_ldtk_entity::<StairEntity>("Stairs")
+            .add_event::<NextLevel>()
+            .add_event::<RestartLevel>()
+            .add_event::<Reset>();
     }
 }

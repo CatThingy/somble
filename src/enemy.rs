@@ -319,6 +319,8 @@ impl Plugin {
             (With<Enemy>, Without<Player>, Changed<TextureAtlasSprite>),
         >,
         q_player: Query<&Transform, (Without<Enemy>, With<Player>)>,
+        assets: Res<AssetServer>,
+        mut atlases: ResMut<Assets<TextureAtlas>>,
     ) {
         let player_transform = match q_player.get_single() {
             Ok(v) => v,
@@ -334,6 +336,7 @@ impl Plugin {
                 match element {
                     Element::Fire => {
                         cmd.spawn_bundle(SpriteBundle {
+                            texture: assets.load("fire_elemental_attack.png"),
                             transform: Transform {
                                 translation: enemy_transform.translation,
                                 ..default()
@@ -366,6 +369,7 @@ impl Plugin {
 
                             let direction = Mat2::from_angle(rotation) * Vec2::X;
                             cmd.spawn_bundle(SpriteBundle {
+                                texture: assets.load("water_elemental_attack.png"),
                                 transform: Transform {
                                     translation: enemy_transform.translation,
                                     ..default()
@@ -386,6 +390,7 @@ impl Plugin {
                                 ActiveEvents::COLLISION_EVENTS,
                                 Sensor,
                                 Hitbox,
+                                DamageOnce::new(10.0, Falloff::none()),
                                 DespawnTimer(Timer::from_seconds(5.0, false)),
                                 Spiral { rate: 2.0 },
                                 NotFromLevel,
@@ -394,6 +399,7 @@ impl Plugin {
                     }
                     Element::Wind => {
                         cmd.spawn_bundle(SpriteBundle {
+                            texture: assets.load("wind_elemental_attack.png"),
                             transform: Transform {
                                 translation: enemy_transform.translation,
                                 ..default()
@@ -414,12 +420,17 @@ impl Plugin {
                             ActiveEvents::COLLISION_EVENTS,
                             Sensor,
                             Hitbox,
+                            DamageOnce::new(10.0, Falloff::none()),
                             DespawnTimer(Timer::from_seconds(0.05, false)),
                             NotFromLevel,
                         ));
                     }
                     Element::Lightning => {
-                        cmd.spawn_bundle(SpriteBundle {
+                        cmd.spawn_bundle(SpriteSheetBundle {
+                            texture_atlas: {
+                                let tex = assets.load("lightning_elemental_attack.png");
+                                atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 6, 1))
+                            },
                             transform: Transform {
                                 translation: enemy_transform.translation,
                                 ..default()
@@ -435,11 +446,13 @@ impl Plugin {
                             Collider::ball(4.0),
                             CollisionGroups {
                                 memberships: ENEMY_ATTACK_COLLISION_GROUP,
-                                filters: PLAYER_COLLISION_GROUP | WALL_COLLISION_GROUP,
+                                filters: WALL_COLLISION_GROUP,
                             },
                             ActiveEvents::COLLISION_EVENTS,
                             DespawnTimer(Timer::from_seconds(5.0, false)),
+                            UniformAnim(Timer::from_seconds(0.1, true)),
                             NotFromLevel,
+                            DestroyOnHit,
                         ))
                         .with_children(|parent| {
                             parent.spawn_bundle((
@@ -451,12 +464,13 @@ impl Plugin {
                                 ActiveEvents::COLLISION_EVENTS,
                                 Sensor,
                                 Hitbox,
-                                DamagePeriodic::new(5.0, Falloff::none(), 0.5),
+                                DamagePeriodic::new(5.0, Falloff::none(), 0.1),
                             ));
                         });
                     }
                     Element::Earth => {
                         cmd.spawn_bundle(SpriteBundle {
+                            texture: assets.load("earth_elemental_attack.png"),
                             transform: Transform {
                                 translation: enemy_transform.translation,
                                 ..default()

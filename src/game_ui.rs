@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::{
-    health::Health,
+    health::{Dead, Health},
     level::{Reset, RestartLevel},
     player::Player,
     utils::TimeScale,
@@ -109,7 +109,7 @@ impl Plugin {
                             },
                             ..default()
                         },
-                        color: Color::WHITE.into(),
+                        color: Color::NONE.into(),
                         ..default()
                     })
                     .with_children(|panel| {
@@ -119,8 +119,8 @@ impl Plugin {
                                     display: Display::None,
                                     justify_content: JustifyContent::SpaceEvenly,
                                     size: Size {
-                                        width: Val::Percent(100.0),
-                                        height: Val::Auto,
+                                        width: Val::Px(512.0),
+                                        height: Val::Px(128.0),
                                     },
                                     ..default()
                                 },
@@ -135,7 +135,7 @@ impl Plugin {
                                     justify_content: JustifyContent::SpaceEvenly,
                                     size: Size {
                                         width: Val::Px(512.0),
-                                        height: Val::Auto,
+                                        height: Val::Px(128.0),
                                     },
                                     ..default()
                                 },
@@ -237,14 +237,6 @@ impl Plugin {
 
     fn pause(
         mut q_panel: Query<&mut Style, (With<GameMenu>, Without<PauseText>, Without<DeathText>)>,
-        mut q_pause_text: Query<
-            &mut Style,
-            (Without<GameMenu>, With<PauseText>, Without<DeathText>),
-        >,
-        mut q_death_text: Query<
-            &mut Style,
-            (Without<GameMenu>, Without<PauseText>, With<DeathText>),
-        >,
         mut time_scale: ResMut<TimeScale>,
     ) {
         time_scale.0 = f32::EPSILON;
@@ -253,49 +245,43 @@ impl Plugin {
             Ok(v) => v,
             Err(_) => return,
         };
-        let mut pause_text = match q_pause_text.get_single_mut() {
-            Ok(v) => v,
-            Err(_) => return,
-        };
-        let mut death_text = match q_death_text.get_single_mut() {
-            Ok(v) => v,
-            Err(_) => return,
-        };
 
         panel.display = Display::Flex;
-        pause_text.display = Display::Flex;
-        death_text.display = Display::None;
     }
 
-    fn unpause(
-        mut q_panel: Query<&mut Style, (With<GameMenu>, Without<PauseText>)>,
-        mut q_pause_text: Query<&mut Style, (Without<GameMenu>, With<PauseText>)>,
-        mut time_scale: ResMut<TimeScale>,
-    ) {
+    fn unpause(mut q_panel: Query<&mut Style, With<GameMenu>>, mut time_scale: ResMut<TimeScale>) {
         time_scale.0 = 1.0;
 
         let mut panel = match q_panel.get_single_mut() {
             Ok(v) => v,
             Err(_) => return,
         };
-        let mut pause_text = match q_pause_text.get_single_mut() {
-            Ok(v) => v,
-            Err(_) => return,
-        };
         panel.display = Display::None;
-        pause_text.display = Display::None;
     }
 
     fn handle_pause(
         mut cmd: Commands,
+        mut q_pause_text: Query<&mut Style, (With<PauseText>, Without<DeathText>)>,
+        mut q_death_text: Query<&mut Style, (Without<PauseText>, With<DeathText>)>,
+        q_dead_player: Query<(), (With<Player>, With<Dead>, Without<Style>)>,
         paused: Res<CurrentState<PauseState>>,
         keyboard: Res<Input<KeyCode>>,
     ) {
-        if keyboard.just_pressed(KeyCode::Escape) {
+        if keyboard.just_pressed(KeyCode::Escape) && q_dead_player.is_empty() {
             match paused.0 {
                 PauseState::Paused => cmd.insert_resource(NextState(PauseState::Unpaused)),
                 PauseState::Unpaused => cmd.insert_resource(NextState(PauseState::Paused)),
             }
+            let mut pause_text = match q_pause_text.get_single_mut() {
+                Ok(v) => v,
+                Err(_) => return,
+            };
+            let mut death_text = match q_death_text.get_single_mut() {
+                Ok(v) => v,
+                Err(_) => return,
+            };
+            pause_text.display = Display::Flex;
+            death_text.display = Display::None;
         }
     }
 

@@ -6,12 +6,13 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::essence::Essence;
-use crate::health::Health;
+use crate::game_ui::{DeathText, PauseText};
+use crate::health::{Dead, Health};
 use crate::hitstun::HitstunTimer;
 use crate::level::NotFromLevel;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
 use crate::utils::{MousePosition, TimeScale};
-use crate::{consts::*, Element, Enemy, GameState};
+use crate::{consts::*, Element, Enemy, GameState, PauseState};
 
 #[derive(Component)]
 pub struct Player;
@@ -313,6 +314,19 @@ impl Plugin {
             }
         }
     }
+
+    fn die(
+        mut cmd: Commands,
+        q_dead_player: Query<(), (With<Player>, Added<Dead>, Without<Style>)>,
+        mut q_death_text: Query<&mut Style, (With<DeathText>, Without<PauseText>)>,
+        mut q_pause_text: Query<&mut Style, (Without<DeathText>, With<PauseText>)>,
+    ) {
+        if !q_dead_player.is_empty() {
+            cmd.insert_resource(NextState(PauseState::Paused));
+            q_death_text.single_mut().display = Display::Flex;
+            q_pause_text.single_mut().display = Display::None;
+        }
+    }
 }
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
@@ -321,6 +335,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::kick.run_in_state(GameState::InGame))
             .add_system(Self::init_throw.run_in_state(GameState::InGame))
             .add_system(Self::handle_kick.run_in_state(GameState::InGame))
+            .add_system(Self::die.run_in_state(GameState::InGame))
             .init_resource::<InputDirection>()
             .init_resource::<PlayerDirection>()
             .add_event::<Kicked>()

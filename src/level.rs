@@ -6,9 +6,9 @@ use bevy_ecs_ldtk::utils::translation_to_grid_coords;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::{consts::*, PauseState};
 use crate::player::Player;
 use crate::GameState;
+use crate::{consts::*, PauseState};
 
 #[derive(Bundle)]
 pub struct WallBundle {

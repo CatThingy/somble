@@ -455,17 +455,19 @@ impl Plugin {
                             DestroyOnHit,
                         ))
                         .with_children(|parent| {
-                            parent.spawn_bundle((
-                                Collider::ball(16.0),
-                                CollisionGroups {
-                                    memberships: ENEMY_ATTACK_COLLISION_GROUP,
-                                    filters: PLAYER_COLLISION_GROUP,
-                                },
-                                ActiveEvents::COLLISION_EVENTS,
-                                Sensor,
-                                Hitbox,
-                                DamagePeriodic::new(5.0, Falloff::none(), 0.1),
-                            ));
+                            parent
+                                .spawn_bundle(SpatialBundle::default())
+                                .insert_bundle((
+                                    Collider::ball(16.0),
+                                    CollisionGroups {
+                                        memberships: ENEMY_ATTACK_COLLISION_GROUP,
+                                        filters: PLAYER_COLLISION_GROUP,
+                                    },
+                                    ActiveEvents::COLLISION_EVENTS,
+                                    Sensor,
+                                    Hitbox,
+                                    DamagePeriodic::new(5.0, Falloff::none(), 0.1),
+                                ));
                         });
                     }
                     Element::Earth => {

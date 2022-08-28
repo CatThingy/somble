@@ -123,7 +123,7 @@ pub const FIRE_WATER_FALLOFF_END: f32 = 32.0;
 pub const FIRE_WIND_RADIUS: f32 = 48.0;
 pub const FIRE_WIND_DURATION: f32 = 0.1;
 
-pub const FIRE_LIGHTNING_RADIUS: f32 = 2.0;
+pub const FIRE_LIGHTNING_RADIUS: f32 = 4.0;
 pub const FIRE_LIGHTNING_DURATION: f32 = 0.1;
 
 pub const FIRE_EARTH_RADIUS: f32 = 48.0;

@@ -6,7 +6,7 @@ use iyes_loopless::prelude::*;
 use crate::consts::*;
 use crate::health::Dead;
 use crate::hitbox::Hitbox;
-use crate::utils::DespawnTimer;
+use crate::utils::{DespawnTimer, UniformAnim};
 use crate::{
     health::HealthChange,
     hitbox::{DamageOnce, Falloff},
@@ -187,6 +187,8 @@ impl Plugin {
         )>,
         time: Res<Time>,
         time_scale: Res<TimeScale>,
+        assets: Res<AssetServer>,
+        mut atlases: ResMut<Assets<TextureAtlas>>,
     ) {
         let delta = time.delta().mul_f32(**time_scale);
         for (entity, transform, mut delayed_explosion, dead) in &mut q_delayed_explosion {
@@ -195,17 +197,32 @@ impl Plugin {
                 cmd.entity(entity).remove::<DelayedExplosion>();
                 cmd.spawn_bundle(SpatialBundle::from_transform(transform.compute_transform()))
                     .insert_bundle((
-                        Collider::ball(24.0),
-                        CollisionGroups {
-                            memberships: PLAYER_ATTACK_COLLISION_GROUP,
-                            filters: ENEMY_COLLISION_GROUP,
+                        TextureAtlasSprite::default(),
+                        {
+                            let tex = assets.load("delayed_explosion.png");
+                            atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(48.0), 3, 1))
                         },
-                        ActiveEvents::COLLISION_EVENTS,
-                        Sensor,
-                        Hitbox,
-                        DamageOnce::new(60.0, Falloff::none()),
-                        DespawnTimer(Timer::from_seconds(0.05, false)),
-                    ));
+                        DespawnTimer(Timer::from_seconds(0.3, false)),
+                        UniformAnim(Timer::from_seconds(0.1, true)),
+                    ))
+                    .with_children(|parent| {
+                        parent
+                            .spawn_bundle(SpatialBundle::from_transform(
+                                transform.compute_transform(),
+                            ))
+                            .insert_bundle((
+                                Collider::ball(24.0),
+                                CollisionGroups {
+                                    memberships: PLAYER_ATTACK_COLLISION_GROUP,
+                                    filters: ENEMY_COLLISION_GROUP,
+                                },
+                                ActiveEvents::COLLISION_EVENTS,
+                                Sensor,
+                                Hitbox,
+                                DamageOnce::new(60.0, Falloff::none()),
+                                DespawnTimer(Timer::from_seconds(0.05, false)),
+                            ));
+                    });
             }
         }
     }
@@ -239,6 +256,93 @@ impl Plugin {
             }
         }
     }
+
+    fn attach_visuals(
+        mut cmd: Commands,
+        q_on_fire: Query<Entity, Added<OnFire>>,
+        q_shocked: Query<Entity, Added<Shocked>>,
+        q_delayed_explosion: Query<Entity, Added<DelayedExplosion>>,
+        q_blinded: Query<Entity, Added<Blinded>>,
+        q_slowed: Query<Entity, Added<Slowed>>,
+        assets: Res<AssetServer>,
+        mut atlases: ResMut<Assets<TextureAtlas>>,
+    ) {
+        for new_on_fire in &q_on_fire {
+            let visual = cmd
+                .spawn_bundle(SpriteSheetBundle {
+                    texture_atlas: {
+                        let tex = assets.load("on_fire.png");
+                        atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(16.0), 5, 1))
+                    },
+                    ..default()
+                })
+                .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .id();
+            cmd.entity(new_on_fire).add_child(visual);
+        }
+
+        for new_shocked in &q_shocked {
+            let visual = cmd
+                .spawn_bundle(SpriteSheetBundle {
+                    texture_atlas: {
+                        let tex = assets.load("shocked.png");
+                        atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(32.0), 5, 1))
+                    },
+                    ..default()
+                })
+                .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .id();
+            cmd.entity(new_shocked).add_child(visual);
+        }
+
+        for new_delayed_explosion in &q_delayed_explosion {
+            let visual = cmd
+                .spawn_bundle(SpriteSheetBundle {
+                    texture_atlas: {
+                        let tex = assets.load("fire_lightning.png");
+                        atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(16.0), 2, 1))
+                    },
+                    ..default()
+                })
+                .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .id();
+            cmd.entity(new_delayed_explosion).add_child(visual);
+        }
+
+        for new_blinded in &q_blinded {
+            let visual = cmd
+                .spawn_bundle(SpriteSheetBundle {
+                    texture_atlas: {
+                        let tex = assets.load("blinded.png");
+                        atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(16.0), 5, 1))
+                    },
+                    ..default()
+                })
+                .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .id();
+            cmd.entity(new_blinded).add_child(visual);
+        }
+
+        for new_slowed in &q_slowed {
+            let visual = cmd
+                .spawn_bundle(SpriteSheetBundle {
+                    texture_atlas: {
+                        let tex = assets.load("slowed.png");
+                        atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(16.0), 4, 1))
+                    },
+                    ..default()
+                })
+                .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .id();
+            cmd.entity(new_slowed).add_child(visual);
+        }
+    }
+
+    fn remove_visuals<T: Component>(mut cmd: Commands, q_removed: RemovedComponents<T>) {
+        for entity in q_removed.iter() {
+            cmd.entity(entity).despawn_descendants();
+        }
+    }
 }
 
 impl bevy::app::Plugin for Plugin {
@@ -248,6 +352,23 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::tick_shocked.run_in_state(GameState::InGame))
             .add_system(Self::tick_delayed_explosion.run_in_state(GameState::InGame))
             .add_system(Self::tick_blinded.run_in_state(GameState::InGame))
-            .add_system(Self::tick_slowed.run_in_state(GameState::InGame));
+            .add_system(Self::tick_slowed.run_in_state(GameState::InGame))
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                Self::remove_visuals::<OnFire>.run_in_state(GameState::InGame),
+            )
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                Self::remove_visuals::<Shocked>.run_in_state(GameState::InGame),
+            )
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                Self::remove_visuals::<Blinded>.run_in_state(GameState::InGame),
+            )
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                Self::remove_visuals::<Slowed>.run_in_state(GameState::InGame),
+            )
+            .add_system(Self::attach_visuals.run_in_state(GameState::InGame));
     }
 }

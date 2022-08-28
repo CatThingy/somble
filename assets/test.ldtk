@@ -1327,15 +1327,15 @@
 							"__pivot": [0,0],
 							"__tags": [],
 							"__tile": null,
-							"__smartColor": "#FF0000",
+							"__smartColor": "#FFEA00",
 							"iid": "d6670520-02f0-11ed-8e62-0bf3b8d3e49c",
 							"width": 16,
 							"height": 16,
 							"defUid": 26,
 							"px": [128,160],
-							"fieldInstances": [{ "__identifier": "Element", "__value": "Fire", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
+							"fieldInstances": [{ "__identifier": "Element", "__value": "Lightning", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
 								"id": "V_String",
-								"params": ["Fire"]
+								"params": ["Lightning"]
 							}] }]
 						},
 						{
@@ -1344,15 +1344,15 @@
 							"__pivot": [0,0],
 							"__tags": [],
 							"__tile": null,
-							"__smartColor": "#74FFAE",
+							"__smartColor": "#FFEA00",
 							"iid": "d6a3e710-02f0-11ed-8e62-a77a3c8a1e86",
 							"width": 16,
 							"height": 16,
 							"defUid": 26,
 							"px": [80,128],
-							"fieldInstances": [{ "__identifier": "Element", "__value": "Wind", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
+							"fieldInstances": [{ "__identifier": "Element", "__value": "Lightning", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
 								"id": "V_String",
-								"params": ["Wind"]
+								"params": ["Lightning"]
 							}] }]
 						},
 						{
@@ -1361,15 +1361,15 @@
 							"__pivot": [0,0],
 							"__tags": [],
 							"__tile": null,
-							"__smartColor": "#008412",
+							"__smartColor": "#FFEA00",
 							"iid": "d6e11720-02f0-11ed-8e62-4dca9dbf4594",
 							"width": 16,
 							"height": 16,
 							"defUid": 26,
 							"px": [192,160],
-							"fieldInstances": [{ "__identifier": "Element", "__value": "Earth", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
+							"fieldInstances": [{ "__identifier": "Element", "__value": "Lightning", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
 								"id": "V_String",
-								"params": ["Earth"]
+								"params": ["Lightning"]
 							}] }]
 						},
 						{
@@ -1378,15 +1378,15 @@
 							"__pivot": [0,0],
 							"__tags": [],
 							"__tile": null,
-							"__smartColor": "#008412",
+							"__smartColor": "#FFEA00",
 							"iid": "d7285950-02f0-11ed-8e62-8bc2f277cfe4",
 							"width": 16,
 							"height": 16,
 							"defUid": 26,
 							"px": [176,112],
-							"fieldInstances": [{ "__identifier": "Element", "__value": "Earth", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
+							"fieldInstances": [{ "__identifier": "Element", "__value": "Lightning", "__type": "LocalEnum.Element", "__tile": null, "defUid": 59, "realEditorValues": [{
 								"id": "V_String",
-								"params": ["Earth"]
+								"params": ["Lightning"]
 							}] }]
 						}
 					]

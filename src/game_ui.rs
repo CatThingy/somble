@@ -5,6 +5,7 @@ use crate::{
     health::{Dead, Health},
     level::{Reset, RestartLevel},
     player::Player,
+    potion::PotionBrewState,
     utils::TimeScale,
     GameState, PauseState,
 };
@@ -266,6 +267,7 @@ impl Plugin {
         q_dead_player: Query<(), (With<Player>, With<Dead>, Without<Style>)>,
         paused: Res<CurrentState<PauseState>>,
         keyboard: Res<Input<KeyCode>>,
+        mut brew_state: ResMut<PotionBrewState>,
     ) {
         if keyboard.just_pressed(KeyCode::Escape) && q_dead_player.is_empty() {
             match paused.0 {
@@ -282,6 +284,8 @@ impl Plugin {
             };
             pause_text.display = Display::Flex;
             death_text.display = Display::None;
+
+            *brew_state = PotionBrewState::Inactive;
         }
     }
 

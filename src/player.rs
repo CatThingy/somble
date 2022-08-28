@@ -289,6 +289,7 @@ impl Plugin {
             brew_ui_transform.translation.y = mouse_pos.y;
 
             brew_data.direction = throw_dir;
+            brew_data.position = mouse_pos.truncate();
             *brew_state = PotionBrewState::Active;
         }
     }

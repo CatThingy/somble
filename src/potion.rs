@@ -17,7 +17,7 @@ use crate::{
         DespawnTimer, Digits, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale,
         UniformAnim,
     },
-    Element, GameState,
+    Element, GameState, PauseState,
 };
 
 #[derive(Component)]
@@ -56,6 +56,7 @@ pub struct PotionBundle {
 #[derive(Default)]
 pub struct PotionBrewData {
     pub direction: Vec2,
+    pub position: Vec2,
     contents: (Option<Element>, Option<Element>),
 }
 
@@ -786,7 +787,6 @@ impl Plugin {
         mut event_reader: EventReader<ThrowPotion>,
         q_player: Query<&Transform, With<Player>>,
         brew_data: Res<PotionBrewData>,
-        mouse_pos: Res<MousePosition>,
     ) {
         let player_transform = match q_player.get_single() {
             Ok(v) => v,
@@ -814,7 +814,7 @@ impl Plugin {
                     filters: WALL_COLLISION_GROUP,
                 },
                 active_events: ActiveEvents::COLLISION_EVENTS,
-                explode_pos: ExplodePosition(mouse_pos.truncate()),
+                explode_pos: ExplodePosition(brew_data.position),
                 sensor: Sensor,
                 nfl: NotFromLevel,
             });
@@ -1090,7 +1090,11 @@ impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_enter_system(GameState::InGame, Self::init)
             .add_system(Self::throw_potion.run_in_state(GameState::InGame))
-            .add_system(Self::manage_brew_state.run_in_state(GameState::InGame))
+            .add_system(
+                Self::manage_brew_state
+                    .run_in_state(GameState::InGame)
+                    .run_not_in_state(PauseState::Paused),
+            )
             .add_system(Self::update_brew.run_in_state(GameState::InGame))
             .add_system(Self::potion_explode.run_in_state(GameState::InGame))
             .add_system(Self::potion_effect.run_in_state(GameState::InGame))

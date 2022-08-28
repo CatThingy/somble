@@ -95,7 +95,7 @@ pub const EARTH_ELEMENTAL_ATTACK_DAMAGE: f32 = 30.0;
 
 pub const FIRE_FIRE_RADIUS: f32 = 32.0;
 pub const FIRE_FIRE_IMPULSE: f32 = 25.0;
-pub const FIRE_FIRE_DAMAGE: f32 = 25.0;
+pub const FIRE_FIRE_DAMAGE: f32 = 60.0;
 pub const FIRE_FIRE_HITSTUN: f32 = 0.5;
 
 pub const WATER_WATER_SPEED: f32 = 100.0;

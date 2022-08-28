@@ -97,7 +97,7 @@ pub struct WalkableTiles(HashSet<IVec2>);
 
 pub struct CurrentLevel(pub usize);
 
-pub struct NextLevel;
+pub struct ChangeLevel(pub usize);
 pub struct RestartLevel;
 pub struct Reset;
 
@@ -124,7 +124,8 @@ impl Plugin {
 
     fn update_stairs(
         mut event_reader: EventReader<CollisionEvent>,
-        mut event_writer: EventWriter<NextLevel>,
+        mut event_writer: EventWriter<ChangeLevel>,
+        current_level: Res<CurrentLevel>,
         q_player: Query<(), With<Player>>,
         q_stairs: Query<(), With<Stairs>>,
     ) {
@@ -133,14 +134,14 @@ impl Plugin {
                 CollisionEvent::Started(e1, e2, _) => {
                     if let Ok(_) = q_stairs.get(*e1) {
                         if let Ok(_) = q_player.get(*e2) {
-                            event_writer.send(NextLevel);
+                            event_writer.send(ChangeLevel(current_level.0 + 1));
                             return;
                         } else {
                             continue;
                         }
                     } else if let Ok(_) = q_stairs.get(*e2) {
                         if let Ok(_) = q_player.get(*e1) {
-                            event_writer.send(NextLevel);
+                            event_writer.send(ChangeLevel(current_level.0 + 1));
                             return;
                         } else {
                             continue;
@@ -154,14 +155,14 @@ impl Plugin {
         }
     }
 
-    fn next_level(
+    fn change_level(
         mut cmd: Commands,
-        event_reader: EventReader<NextLevel>,
+        mut event_reader: EventReader<ChangeLevel>,
         mut current_level: ResMut<CurrentLevel>,
         q_despawn: Query<Entity, With<NotFromLevel>>,
     ) {
-        if !event_reader.is_empty() {
-            current_level.0 += 1;
+        if let Some(event) = event_reader.iter().next() {
+            current_level.0 = event.0;
             cmd.insert_resource(LevelSelection::Index(current_level.0));
             for entity in &q_despawn {
                 cmd.entity(entity).despawn_recursive();
@@ -218,8 +219,16 @@ impl bevy::app::Plugin for Plugin {
         app.add_enter_system(GameState::InGame, Self::init)
             .add_exit_system(GameState::InGame, Self::cleanup)
             .add_system(Self::register_walkable.run_in_state(GameState::InGame))
-            .add_system(Self::update_stairs.run_in_state(GameState::InGame))
-            .add_system(Self::next_level.run_in_state(GameState::InGame))
+            .add_system(
+                Self::update_stairs
+                    .run_in_state(GameState::InGame)
+                    .label("stairs"),
+            )
+            .add_system(
+                Self::change_level
+                    .run_in_state(GameState::InGame)
+                    .after("stairs"),
+            )
             .add_system(Self::restart_level.run_in_state(GameState::InGame))
             .add_system(Self::reset.run_in_state(GameState::InGame))
             .insert_resource(LevelSelection::Index(0))
@@ -228,7 +237,7 @@ impl bevy::app::Plugin for Plugin {
             .register_ldtk_int_cell::<WallBundle>(1)
             .register_ldtk_int_cell::<WalkableBundle>(2)
             .register_ldtk_entity::<StairEntity>("Stairs")
-            .add_event::<NextLevel>()
+            .add_event::<ChangeLevel>()
             .add_event::<RestartLevel>()
             .add_event::<Reset>();
     }

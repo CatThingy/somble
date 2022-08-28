@@ -7,7 +7,7 @@ use iyes_loopless::prelude::*;
 
 use crate::essence::{Essence, EssenceCounts};
 use crate::game_ui::{DeathText, PauseText};
-use crate::health::{Dead, Health};
+use crate::health::{Dead, Health, HealthChange};
 use crate::hitstun::HitstunTimer;
 use crate::level::NotFromLevel;
 use crate::potion::{PotionBrewData, PotionBrewState, PotionBrewUi};
@@ -100,15 +100,6 @@ impl Plugin {
         mut input_direction: ResMut<InputDirection>,
         mut player_direction: ResMut<PlayerDirection>,
     ) {
-        let (mut player_vel, hitstun) = match q_player.get_single_mut() {
-            Ok(v) => v,
-            Err(_) => return,
-        };
-
-        if !hitstun.finished() {
-            return;
-        }
-
         // Prevent stopping on SOCD
         if keys.just_pressed(KeyCode::A) {
             input_direction.x = -1.0;
@@ -150,6 +141,15 @@ impl Plugin {
             } else {
                 input_direction.y = 0.0;
             }
+        }
+
+        let (mut player_vel, hitstun) = match q_player.get_single_mut() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+
+        if !hitstun.finished() {
+            return;
         }
 
         player_vel.linvel = input_direction.normalize_or_zero() * PLAYER_SPEED;
@@ -233,12 +233,49 @@ impl Plugin {
         }
     }
 
+    fn update_player_spawn(
+        mut q_player: Query<&mut TextureAtlasSprite, Added<Player>>,
+        player_direction: Res<PlayerDirection>,
+        input_direction: Res<InputDirection>,
+    ) {
+        let mut sprite = match q_player.get_single_mut() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        if **input_direction != Vec2::ZERO {
+            match **player_direction {
+                IVec2 { x: _, y: 1 } => {
+                    sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 0
+                }
+                IVec2 { x: 1, y: _ } => {
+                    sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 1
+                }
+                IVec2 { x: -1, y: _ } => {
+                    sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 2
+                }
+                IVec2 { x: _, y: -1 } => {
+                    sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 3
+                }
+                _ => (),
+            }
+        } else {
+            match **player_direction {
+                IVec2 { x: _, y: 1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 0,
+                IVec2 { x: 1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 1,
+                IVec2 { x: -1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 2,
+                IVec2 { x: _, y: -1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 3,
+                _ => (),
+            }
+        }
+    }
+
     fn kick(
         rapier_ctx: Res<RapierContext>,
         mouse_pos: Res<MousePosition>,
         q_player: Query<(&Transform, &Collider), With<Player>>,
         mouse_buttons: Res<Input<MouseButton>>,
-        mut event_writer: EventWriter<Kicked>,
+        mut kick_event: EventWriter<Kicked>,
+        mut health_event: EventWriter<HealthChange>,
         brew_state: Res<PotionBrewState>,
     ) {
         if *brew_state != PotionBrewState::Inactive {
@@ -259,9 +296,13 @@ impl Plugin {
             if let Some((entity, _)) =
                 rapier_ctx.cast_shape(pos, 0.0, cast_dir, collider, PLAYER_KICK_RANGE, filter)
             {
-                event_writer.send(Kicked {
+                kick_event.send(Kicked {
                     target: entity,
                     direction: cast_dir,
+                });
+                health_event.send(HealthChange {
+                    target: entity,
+                    amount: -10.0,
                 });
             }
         }
@@ -338,6 +379,7 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::kick.run_in_state(GameState::InGame))
             .add_system(Self::init_throw.run_in_state(GameState::InGame))
             .add_system(Self::handle_kick.run_in_state(GameState::InGame))
+            .add_system(Self::update_player_spawn.run_in_state(GameState::InGame))
             .add_system(Self::die.run_in_state(GameState::InGame))
             .init_resource::<InputDirection>()
             .init_resource::<PlayerDirection>()

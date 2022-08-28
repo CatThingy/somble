@@ -54,6 +54,7 @@ fn main() {
             ..default()
         })
         .insert_resource(ImageSettings::default_nearest())
+        .insert_resource(ClearColor(Color::rgb_u8(140, 140, 140)))
         .add_loopless_state(GameState::MainMenu)
         .add_loopless_state(PauseState::Unpaused)
         .add_plugins(DefaultPlugins)

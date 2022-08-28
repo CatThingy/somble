@@ -1067,6 +1067,7 @@ impl Plugin {
             }
         }
     }
+
     fn update_counter(
         mut q_counter: Query<(&mut TextureAtlasSprite, &EssenceCounter)>,
         amounts: Res<EssenceCounts>,
@@ -1085,10 +1086,15 @@ impl Plugin {
             }
         }
     }
+
+    fn cleanup(mut cmd: Commands, q_brew_ui: Query<Entity, With<PotionBrewUi>>) {
+        cmd.entity(q_brew_ui.single()).despawn_recursive();
+    }
 }
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_enter_system(GameState::InGame, Self::init)
+            .add_exit_system(GameState::InGame, Self::cleanup)
             .add_system(Self::throw_potion.run_in_state(GameState::InGame))
             .add_system(
                 Self::manage_brew_state

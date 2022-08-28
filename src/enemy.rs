@@ -246,6 +246,7 @@ impl Plugin {
                 &TextureAtlasSprite,
                 &mut AttackTimer,
                 &EnemyStats,
+                Option<&Blinded>,
             ),
             (With<Enemy>, Without<Player>),
         >,
@@ -258,10 +259,14 @@ impl Plugin {
         };
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, mut enemy_state, sprite, mut attack_timer, stats) in &mut q_enemy {
+        for (enemy_transform, mut enemy_state, sprite, mut attack_timer, stats, blinded) in
+            &mut q_enemy
+        {
             let enemy_pos = enemy_transform.translation.truncate();
             let direction = player_pos - enemy_pos;
             let distance = direction.length();
+
+            let blinded_multiplier = if blinded.is_some() { 0.33 } else { 1.0 };
             match *enemy_state {
                 EnemyState::Idle => {
                     if distance < stats.aggro_range {
@@ -277,14 +282,14 @@ impl Plugin {
                         ..default()
                     };
 
-                    if distance > stats.forget_range {
+                    if distance > stats.forget_range * blinded_multiplier {
                         *enemy_state = EnemyState::Idle;
                     } else if attack_timer.finished()
                         && matches!(
                             rapier_ctx.cast_ray(enemy_pos, direction, f32::MAX, true, sight_filter),
                             Some((hit, _)) if hit == player,
                         )
-                        && distance < stats.attack_range
+                        && distance < stats.attack_range * blinded_multiplier
                     {
                         *enemy_state = EnemyState::Attack;
                         attack_timer.reset();
@@ -466,7 +471,11 @@ impl Plugin {
                                     ActiveEvents::COLLISION_EVENTS,
                                     Sensor,
                                     Hitbox,
-                                    DamagePeriodic::new(LIGHTNING_ELEMENTAL_ATTACK_DAMAGE, Falloff::none(), 0.1),
+                                    DamagePeriodic::new(
+                                        LIGHTNING_ELEMENTAL_ATTACK_DAMAGE,
+                                        Falloff::none(),
+                                        0.1,
+                                    ),
                                 ));
                         });
                     }

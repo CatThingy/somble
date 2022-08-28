@@ -6,6 +6,7 @@ use iyes_loopless::prelude::*;
 
 use crate::{
     consts::*,
+    health::HealthChange,
     player::Player,
     utils::{ElementIconAtlases, UniformAnim},
     Element, GameState,
@@ -83,20 +84,24 @@ impl Plugin {
         q_essence: Query<(&Element, Entity), (With<Essence>, Without<Player>)>,
         q_player: Query<Entity, With<Player>>,
         mut counts: ResMut<EssenceCounts>,
+        mut event_writer: EventWriter<HealthChange>,
     ) {
         for event in event_reader.iter() {
             match event {
                 CollisionEvent::Started(e1, e2, _) => {
                     let essence_data;
+                    let player;
                     if let Ok(_) = q_player.get(*e1) {
                         if let Ok(data) = q_essence.get(*e2) {
                             essence_data = data;
+                            player = *e1;
                         } else {
                             continue;
                         }
                     } else if let Ok(_) = q_player.get(*e2) {
                         if let Ok(data) = q_essence.get(*e1) {
                             essence_data = data;
+                            player = *e2;
                         } else {
                             continue;
                         }
@@ -108,6 +113,10 @@ impl Plugin {
                     if counts[*element] < 3 {
                         cmd.entity(essence).despawn_recursive();
                         *counts.get_mut(element).unwrap() += 1;
+                        event_writer.send(HealthChange {
+                            target: player,
+                            amount: 10.0,
+                        });
                     }
                 }
                 _ => (),

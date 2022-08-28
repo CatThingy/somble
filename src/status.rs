@@ -338,9 +338,15 @@ impl Plugin {
         }
     }
 
-    fn remove_visuals<T: Component>(mut cmd: Commands, q_removed: RemovedComponents<T>) {
+    fn remove_visuals<T: Component>(
+        mut cmd: Commands,
+        q_removed: RemovedComponents<T>,
+        q_all: Query<()>,
+    ) {
         for entity in q_removed.iter() {
-            cmd.entity(entity).despawn_descendants();
+            if q_all.get(entity).is_ok() {
+                cmd.entity(entity).despawn_descendants();
+            }
         }
     }
 }

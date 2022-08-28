@@ -357,7 +357,7 @@ impl Plugin {
                             ActiveEvents::COLLISION_EVENTS,
                             Sensor,
                             Hitbox,
-                            DamageOnce::new(10.0, Falloff::none()),
+                            DamageOnce::new(FIRE_ELEMENTAL_ATTACK_DAMAGE, Falloff::none()),
                             DestroyOnHit,
                             NotFromLevel,
                         ));
@@ -390,7 +390,7 @@ impl Plugin {
                                 ActiveEvents::COLLISION_EVENTS,
                                 Sensor,
                                 Hitbox,
-                                DamageOnce::new(10.0, Falloff::none()),
+                                DamageOnce::new(WATER_ELEMENTAL_ATTACK_DAMAGE, Falloff::none()),
                                 DespawnTimer(Timer::from_seconds(5.0, false)),
                                 Spiral { rate: 2.0 },
                                 NotFromLevel,
@@ -420,7 +420,7 @@ impl Plugin {
                             ActiveEvents::COLLISION_EVENTS,
                             Sensor,
                             Hitbox,
-                            DamageOnce::new(10.0, Falloff::none()),
+                            DamageOnce::new(WIND_ELEMENTAL_ATTACK_DAMAGE, Falloff::none()),
                             DespawnTimer(Timer::from_seconds(0.05, false)),
                             NotFromLevel,
                         ));
@@ -466,7 +466,7 @@ impl Plugin {
                                     ActiveEvents::COLLISION_EVENTS,
                                     Sensor,
                                     Hitbox,
-                                    DamagePeriodic::new(5.0, Falloff::none(), 0.1),
+                                    DamagePeriodic::new(LIGHTNING_ELEMENTAL_ATTACK_DAMAGE, Falloff::none(), 0.1),
                                 ));
                         });
                     }
@@ -493,6 +493,7 @@ impl Plugin {
                             ActiveEvents::COLLISION_EVENTS,
                             Sensor,
                             Hitbox,
+                            DamageOnce::new(EARTH_ELEMENTAL_ATTACK_DAMAGE, Falloff::none()),
                             DespawnTimer(Timer::from_seconds(0.05, false)),
                             NotFromLevel,
                         ));

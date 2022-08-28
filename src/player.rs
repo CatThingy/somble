@@ -236,7 +236,7 @@ impl Plugin {
     fn kick(
         rapier_ctx: Res<RapierContext>,
         mouse_pos: Res<MousePosition>,
-        q_player: Query<&Transform, With<Player>>,
+        q_player: Query<(&Transform, &Collider), With<Player>>,
         mouse_buttons: Res<Input<MouseButton>>,
         mut event_writer: EventWriter<Kicked>,
         brew_state: Res<PotionBrewState>,
@@ -244,7 +244,7 @@ impl Plugin {
         if *brew_state != PotionBrewState::Inactive {
             return;
         }
-        let player = match q_player.get_single() {
+        let (player, collider) = match q_player.get_single() {
             Ok(v) => v,
             Err(_) => return,
         };
@@ -254,10 +254,10 @@ impl Plugin {
             let cast_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
             let filter = QueryFilter::new().groups(InteractionGroups {
                 memberships: PLAYER_ATTACK_COLLISION_GROUP,
-                filter: ENEMY_COLLISION_GROUP | WALL_COLLISION_GROUP | ENEMY_ATTACK_COLLISION_GROUP,
+                filter: ENEMY_COLLISION_GROUP,
             });
             if let Some((entity, _)) =
-                rapier_ctx.cast_ray(pos, cast_dir, PLAYER_KICK_RANGE, true, filter)
+                rapier_ctx.cast_shape(pos, 0.0, cast_dir, collider, PLAYER_KICK_RANGE, filter)
             {
                 event_writer.send(Kicked {
                     target: entity,

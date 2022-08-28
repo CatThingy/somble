@@ -5,7 +5,7 @@ use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::essence::Essence;
+use crate::essence::{Essence, EssenceCounts};
 use crate::game_ui::{DeathText, PauseText};
 use crate::health::{Dead, Health};
 use crate::hitstun::HitstunTimer;
@@ -320,11 +320,13 @@ impl Plugin {
         q_dead_player: Query<(), (With<Player>, Added<Dead>, Without<Style>)>,
         mut q_death_text: Query<&mut Style, (With<DeathText>, Without<PauseText>)>,
         mut q_pause_text: Query<&mut Style, (Without<DeathText>, With<PauseText>)>,
+        mut essences: ResMut<EssenceCounts>,
     ) {
         if !q_dead_player.is_empty() {
             cmd.insert_resource(NextState(PauseState::Paused));
             q_death_text.single_mut().display = Display::Flex;
             q_pause_text.single_mut().display = Display::None;
+            *essences = EssenceCounts::default();
         }
     }
 }

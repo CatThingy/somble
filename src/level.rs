@@ -6,6 +6,7 @@ use bevy_ecs_ldtk::utils::translation_to_grid_coords;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
+use crate::essence::EssenceCounts;
 use crate::player::Player;
 use crate::GameState;
 use crate::{consts::*, PauseState};
@@ -173,12 +174,14 @@ impl Plugin {
         event_reader: EventReader<RestartLevel>,
         q_level: Query<Entity, With<Handle<LdtkLevel>>>,
         q_despawn: Query<Entity, With<NotFromLevel>>,
+        mut essences: ResMut<EssenceCounts>,
     ) {
         if !event_reader.is_empty() {
             cmd.entity(q_level.single()).insert(Respawn);
             for entity in &q_despawn {
                 cmd.entity(entity).despawn_recursive();
             }
+            *essences = EssenceCounts::default();
         }
     }
 
@@ -186,10 +189,12 @@ impl Plugin {
         mut cmd: Commands,
         event_reader: EventReader<Reset>,
         mut current_level: ResMut<CurrentLevel>,
+        mut essences: ResMut<EssenceCounts>,
     ) {
         if !event_reader.is_empty() {
             current_level.0 = 0;
             cmd.insert_resource(LevelSelection::Index(current_level.0));
+            *essences = EssenceCounts::default();
         }
     }
 

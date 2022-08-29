@@ -52,6 +52,13 @@ fn main() {
             gravity: Vec2::ZERO,
             ..default()
         })
+        .insert_resource(WindowDescriptor {
+            width: 1280.0,
+            height: 720.0,
+            title: "Somble".to_string(),
+            canvas: Some("#bevy".to_owned()),
+            ..Default::default()
+        })
         .insert_resource(ImageSettings::default_nearest())
         .insert_resource(ClearColor(Color::rgb_u8(14, 14, 14)))
         .add_loopless_state(GameState::MainMenu)

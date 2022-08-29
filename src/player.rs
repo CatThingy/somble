@@ -1,4 +1,4 @@
-use std::time::Duration;
+use bevy::utils::Duration;
 
 use bevy::{prelude::*, sprite::Anchor};
 use bevy_ecs_ldtk::prelude::*;

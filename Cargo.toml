@@ -23,3 +23,6 @@ pathfinding = "3.0.13"
 
 [target.wasm32-unknown-unknown.dependencies]
 bevy_ecs_ldtk = { version = "0.4.0", features = ["atlas"] }
+
+[patch.crates-io]
+wgpu = { git = "https://github.com/mockersf/wgpu/", branch = "unconditional-clear-workaround" }

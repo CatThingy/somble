@@ -135,8 +135,8 @@ pub const FIRE_LIGHTNING_RADIUS: f32 = 4.0;
 pub const FIRE_LIGHTNING_DURATION: f32 = 0.1;
 
 pub const FIRE_EARTH_RADIUS: f32 = 48.0;
-pub const FIRE_EARTH_DAMAGE: f32 = 5.0;
-pub const FIRE_EARTH_TICK: f32 = 0.1;
+pub const FIRE_EARTH_DAMAGE: f32 = 15.0;
+pub const FIRE_EARTH_TICK: f32 = 0.25;
 pub const FIRE_EARTH_DURATION: f32 = 5.0;
 
 pub const WATER_WIND_CHASE_SPEED: f32 = 10.0;
@@ -150,8 +150,8 @@ pub const WATER_LIGHTNING_DURATION: f32 = 0.1;
 pub const WATER_EARTH_HALF_WIDTH: f32 = 16.0;
 pub const WATER_EARTH_HALF_HEIGHT: f32 = 48.0;
 pub const WATER_EARTH_HITSTUN: f32 = 0.5;
-pub const WATER_EARTH_DAMAGE: f32 = 5.0;
-pub const WATER_EARTH_TICK: f32 = 0.1;
+pub const WATER_EARTH_DAMAGE: f32 = 25.0;
+pub const WATER_EARTH_TICK: f32 = 0.25;
 pub const WATER_EARTH_DURATION: f32 = 5.0;
 
 pub const WIND_LIGHTNING_CHASE_SPEED: f32 = 10.0;

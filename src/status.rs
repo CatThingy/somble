@@ -134,7 +134,7 @@ impl Plugin {
             if on_fire.tick.finished() {
                 event_writer.send(HealthChange {
                     target: entity,
-                    amount: 10.0,
+                    amount: -10.0,
                 });
             }
 
@@ -194,7 +194,9 @@ impl Plugin {
         for (entity, transform, mut delayed_explosion, dead) in &mut q_delayed_explosion {
             delayed_explosion.duration.tick(delta);
             if delayed_explosion.duration.finished() || dead.is_some() {
-                cmd.entity(entity).remove::<DelayedExplosion>();
+                cmd.entity(entity)
+                    .remove::<DelayedExplosion>()
+                    .despawn_descendants();
                 cmd.spawn_bundle(SpatialBundle::from_transform(transform.compute_transform()))
                     .insert_bundle((
                         TextureAtlasSprite::default(),

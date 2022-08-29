@@ -30,6 +30,9 @@ use crate::utils::UniformAnim;
 use crate::Element;
 use crate::{consts::*, player::Player, Enemy, GameState};
 
+#[derive(Component)]
+pub struct Attacked(bool);
+
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct AttackTimer(Timer);
 
@@ -67,6 +70,7 @@ pub struct ElementalBundle {
     attack_timer: AttackTimer,
     element: Element,
     stats: EnemyStats,
+    attacked: Attacked,
     #[bundle]
     spritesheet: SpriteSheetBundle,
 }
@@ -80,11 +84,6 @@ impl LdtkEntity for ElementalBundle {
         asset_server: &AssetServer,
         texture_atlases: &mut Assets<TextureAtlas>,
     ) -> Self {
-        let elemental_texture = asset_server.load("elemental.png");
-        let elemental_atlas =
-            TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 14, 1);
-        let texture_atlas = texture_atlases.add(elemental_atlas);
-
         let mut element = None;
         for field in &entity_instance.field_instances {
             if field.identifier.as_str() == "Element" {
@@ -130,14 +129,12 @@ impl LdtkEntity for ElementalBundle {
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
-                    index: 0,
-                    color: Color::WHITE,
                     ..default()
                 },
-                texture_atlas,
                 ..default()
             },
             stats: EnemyStats::default(),
+            attacked: Attacked(false),
         };
 
         match element {
@@ -155,7 +152,12 @@ impl LdtkEntity for ElementalBundle {
                     forget_range: FIRE_ELEMENTAL_FORGET_RANGE,
                     attack_range: FIRE_ELEMENTAL_ATTACK_RANGE,
                 };
-                bundle.spritesheet.sprite.color = Color::ORANGE_RED;
+                bundle.spritesheet.texture_atlas = {
+                    let elemental_texture = asset_server.load("fire_elemental.png");
+                    let elemental_atlas =
+                        TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 14, 1);
+                    texture_atlases.add(elemental_atlas)
+                };
 
                 bundle
             }
@@ -173,7 +175,12 @@ impl LdtkEntity for ElementalBundle {
                     forget_range: WATER_ELEMENTAL_FORGET_RANGE,
                     attack_range: WATER_ELEMENTAL_ATTACK_RANGE,
                 };
-                bundle.spritesheet.sprite.color = Color::BLUE;
+                bundle.spritesheet.texture_atlas = {
+                    let elemental_texture = asset_server.load("water_elemental.png");
+                    let elemental_atlas =
+                        TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 14, 1);
+                    texture_atlases.add(elemental_atlas)
+                };
 
                 bundle
             }
@@ -191,7 +198,12 @@ impl LdtkEntity for ElementalBundle {
                     forget_range: WIND_ELEMENTAL_FORGET_RANGE,
                     attack_range: WIND_ELEMENTAL_ATTACK_RANGE,
                 };
-                bundle.spritesheet.sprite.color = Color::AQUAMARINE;
+                bundle.spritesheet.texture_atlas = {
+                    let elemental_texture = asset_server.load("wind_elemental.png");
+                    let elemental_atlas =
+                        TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 14, 1);
+                    texture_atlases.add(elemental_atlas)
+                };
 
                 bundle
             }
@@ -209,7 +221,12 @@ impl LdtkEntity for ElementalBundle {
                     forget_range: LIGHTNING_ELEMENTAL_FORGET_RANGE,
                     attack_range: LIGHTNING_ELEMENTAL_ATTACK_RANGE,
                 };
-                bundle.spritesheet.sprite.color = Color::YELLOW;
+                bundle.spritesheet.texture_atlas = {
+                    let elemental_texture = asset_server.load("lightning_elemental.png");
+                    let elemental_atlas =
+                        TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 14, 1);
+                    texture_atlases.add(elemental_atlas)
+                };
 
                 bundle
             }
@@ -227,7 +244,12 @@ impl LdtkEntity for ElementalBundle {
                     forget_range: EARTH_ELEMENTAL_FORGET_RANGE,
                     attack_range: EARTH_ELEMENTAL_ATTACK_RANGE,
                 };
-                bundle.spritesheet.sprite.color = Color::GREEN;
+                bundle.spritesheet.texture_atlas = {
+                    let elemental_texture = asset_server.load("earth_elemental.png");
+                    let elemental_atlas =
+                        TextureAtlas::from_grid(elemental_texture, Vec2::new(16.0, 32.0), 14, 1);
+                    texture_atlases.add(elemental_atlas)
+                };
 
                 bundle
             }
@@ -246,6 +268,7 @@ impl Plugin {
                 &TextureAtlasSprite,
                 &mut AttackTimer,
                 &EnemyStats,
+                &mut Attacked,
                 Option<&Blinded>,
             ),
             (With<Enemy>, Without<Player>),
@@ -259,8 +282,15 @@ impl Plugin {
         };
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, mut enemy_state, sprite, mut attack_timer, stats, blinded) in
-            &mut q_enemy
+        for (
+            enemy_transform,
+            mut enemy_state,
+            sprite,
+            mut attack_timer,
+            stats,
+            mut attacked,
+            blinded,
+        ) in &mut q_enemy
         {
             let enemy_pos = enemy_transform.translation.truncate();
             let direction = player_pos - enemy_pos;
@@ -300,6 +330,7 @@ impl Plugin {
                         == ELEMENTAL_ATTACK_ANIM_OFFSET + ELEMENTAL_ATTACK_ANIM_FRAMES - 1
                     {
                         *enemy_state = EnemyState::Chase;
+                        attacked.0 = false;
                     }
                 }
             }
@@ -319,8 +350,8 @@ impl Plugin {
 
     fn attack(
         mut cmd: Commands,
-        q_enemy: Query<
-            (&Transform, &TextureAtlasSprite, &Element),
+        mut q_enemy: Query<
+            (&Transform, &TextureAtlasSprite, &Element, &mut Attacked),
             (With<Enemy>, Without<Player>, Changed<TextureAtlasSprite>),
         >,
         q_player: Query<&Transform, (Without<Enemy>, With<Player>)>,
@@ -333,8 +364,9 @@ impl Plugin {
         };
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, sprite, element) in &q_enemy {
-            if sprite.index == ELEMENTAL_ATTACK_EMIT_FRAME {
+        for (enemy_transform, sprite, element, mut attacked) in &mut q_enemy {
+            if sprite.index == ELEMENTAL_ATTACK_EMIT_FRAME && !attacked.0 {
+                attacked.0 = true;
                 let enemy_pos = enemy_transform.translation.truncate();
                 let direction = (player_pos - enemy_pos).normalize();
                 // do attack
@@ -474,7 +506,7 @@ impl Plugin {
                                     DamagePeriodic::new(
                                         LIGHTNING_ELEMENTAL_ATTACK_DAMAGE,
                                         Falloff::none(),
-                                        0.1,
+                                        0.25,
                                     ),
                                 ));
                         });

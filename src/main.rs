@@ -16,7 +16,6 @@ mod utils;
 use bevy::{prelude::*, render::texture::ImageSettings};
 
 use bevy_ecs_ldtk::prelude::*;
-use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
@@ -59,7 +58,6 @@ fn main() {
         .add_loopless_state(PauseState::Unpaused)
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(32.0))
-        .add_plugin(WorldInspectorPlugin::default())
         .add_plugin(LdtkPlugin)
         .add_plugin(utils::Plugin)
         .add_plugin(level::Plugin)

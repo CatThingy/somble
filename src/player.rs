@@ -59,7 +59,14 @@ impl LdtkEntity for PlayerBundle {
         texture_atlases: &mut Assets<TextureAtlas>,
     ) -> Self {
         let player_texture = asset_server.load("player.png");
-        let player_atlas = TextureAtlas::from_grid(player_texture, Vec2::new(20.0, 32.0), 4, 5);
+        let player_atlas = TextureAtlas::from_grid_with_padding(
+            player_texture,
+            Vec2::new(20.0, 32.0),
+            4,
+            6,
+            Vec2::ONE * 2.0,
+            Vec2::ONE,
+        );
         let texture_atlas = texture_atlases.add(player_atlas);
         PlayerBundle {
             player: Player,
@@ -97,7 +104,7 @@ pub struct Plugin;
 
 impl Plugin {
     fn movement(
-        mut q_player: Query<(&mut Velocity, &HitstunTimer), With<Player>>,
+        mut q_player: Query<(&mut Velocity, &HitstunTimer, &TextureAtlasSprite), With<Player>>,
         keys: Res<Input<KeyCode>>,
         mut input_direction: ResMut<InputDirection>,
         mut player_direction: ResMut<PlayerDirection>,
@@ -145,12 +152,13 @@ impl Plugin {
             }
         }
 
-        let (mut player_vel, hitstun) = match q_player.get_single_mut() {
+        let (mut player_vel, hitstun, sprite) = match q_player.get_single_mut() {
             Ok(v) => v,
             Err(_) => return,
         };
 
-        if !hitstun.finished() {
+        if !hitstun.finished() || sprite.index >= PLAYER_KICK_ANIM_OFFSET {
+            player_vel.linvel = Vec2::ZERO;
             return;
         }
 
@@ -173,7 +181,7 @@ impl Plugin {
             Err(_) => return,
         };
 
-        if input_direction.is_changed() {
+        if input_direction.is_changed() && sprite.index < PLAYER_KICK_ANIM_OFFSET {
             if **input_direction != Vec2::ZERO {
                 match **player_direction {
                     IVec2 { x: _, y: -1 } => {
@@ -200,36 +208,64 @@ impl Plugin {
                 }
             }
         }
-        if **input_direction != Vec2::ZERO {
+        if **input_direction != Vec2::ZERO || sprite.index >= PLAYER_KICK_ANIM_OFFSET {
             timer.tick(time.delta().mul_f32(**time_scale));
 
             if timer.just_finished() {
-                match **player_direction {
-                    IVec2 { x: _, y: -1 } => {
-                        sprite.index = PLAYER_WALK_ANIM_OFFSET
-                            + PLAYER_WALK_ANIM_FRAMES * 0
-                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
-                                % PLAYER_WALK_ANIM_FRAMES);
+                if sprite.index >= PLAYER_KICK_ANIM_OFFSET {
+                    if **input_direction != Vec2::ZERO {
+                        match **player_direction {
+                            IVec2 { x: _, y: -1 } => {
+                                sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 0
+                            }
+                            IVec2 { x: _, y: 1 } => {
+                                sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 1
+                            }
+                            IVec2 { x: -1, y: _ } => {
+                                sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 2
+                            }
+                            IVec2 { x: 1, y: _ } => {
+                                sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 3
+                            }
+                            _ => (),
+                        }
+                    } else {
+                        match **player_direction {
+                            IVec2 { x: _, y: -1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 0,
+                            IVec2 { x: _, y: 1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 1,
+                            IVec2 { x: -1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 2,
+                            IVec2 { x: 1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 3,
+                            _ => (),
+                        }
                     }
-                    IVec2 { x: _, y: 1 } => {
-                        sprite.index = PLAYER_WALK_ANIM_OFFSET
-                            + PLAYER_WALK_ANIM_FRAMES * 1
-                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
-                                % PLAYER_WALK_ANIM_FRAMES);
+                } else {
+                    match **player_direction {
+                        IVec2 { x: _, y: -1 } => {
+                            sprite.index = PLAYER_WALK_ANIM_OFFSET
+                                + PLAYER_WALK_ANIM_FRAMES * 0
+                                + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                    % PLAYER_WALK_ANIM_FRAMES);
+                        }
+                        IVec2 { x: _, y: 1 } => {
+                            sprite.index = PLAYER_WALK_ANIM_OFFSET
+                                + PLAYER_WALK_ANIM_FRAMES * 1
+                                + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                    % PLAYER_WALK_ANIM_FRAMES);
+                        }
+                        IVec2 { x: -1, y: _ } => {
+                            sprite.index = PLAYER_WALK_ANIM_OFFSET
+                                + PLAYER_WALK_ANIM_FRAMES * 2
+                                + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                    % PLAYER_WALK_ANIM_FRAMES);
+                        }
+                        IVec2 { x: 1, y: _ } => {
+                            sprite.index = PLAYER_WALK_ANIM_OFFSET
+                                + PLAYER_WALK_ANIM_FRAMES * 3
+                                + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
+                                    % PLAYER_WALK_ANIM_FRAMES);
+                        }
+                        _ => (),
                     }
-                    IVec2 { x: -1, y: _ } => {
-                        sprite.index = PLAYER_WALK_ANIM_OFFSET
-                            + PLAYER_WALK_ANIM_FRAMES * 2
-                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
-                                % PLAYER_WALK_ANIM_FRAMES);
-                    }
-                    IVec2 { x: 1, y: _ } => {
-                        sprite.index = PLAYER_WALK_ANIM_OFFSET
-                            + PLAYER_WALK_ANIM_FRAMES * 3
-                            + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
-                                % PLAYER_WALK_ANIM_FRAMES);
-                    }
-                    _ => (),
                 }
             }
         }
@@ -274,7 +310,15 @@ impl Plugin {
     fn kick(
         rapier_ctx: Res<RapierContext>,
         mouse_pos: Res<MousePosition>,
-        q_player: Query<(&Transform, &Collider), With<Player>>,
+        mut q_player: Query<
+            (
+                &Transform,
+                &Collider,
+                &mut TextureAtlasSprite,
+                &mut AnimationTimer,
+            ),
+            With<Player>,
+        >,
         mouse_buttons: Res<Input<MouseButton>>,
         mut kick_event: EventWriter<Kicked>,
         mut health_event: EventWriter<HealthChange>,
@@ -283,14 +327,31 @@ impl Plugin {
         if *brew_state != PotionBrewState::Inactive {
             return;
         }
-        let (player, collider) = match q_player.get_single() {
+        let (player, collider, mut sprite, mut timer) = match q_player.get_single_mut() {
             Ok(v) => v,
             Err(_) => return,
         };
 
-        if mouse_buttons.just_pressed(MouseButton::Left) {
+        if mouse_buttons.just_pressed(MouseButton::Left) && sprite.index < PLAYER_KICK_ANIM_OFFSET {
             let pos = player.translation.truncate();
             let cast_dir = (mouse_pos.truncate() - pos).normalize_or_zero();
+
+            if cast_dir.y.abs() > cast_dir.x.abs() {
+                if cast_dir.y < 0.0 {
+                    sprite.index = PLAYER_KICK_ANIM_OFFSET + 0;
+                } else {
+                    sprite.index = PLAYER_KICK_ANIM_OFFSET + 1;
+                }
+            } else {
+                if cast_dir.x < 0.0 {
+                    sprite.index = PLAYER_KICK_ANIM_OFFSET + 2;
+                } else {
+                    sprite.index = PLAYER_KICK_ANIM_OFFSET + 3;
+                }
+            }
+
+            timer.reset();
+
             let filter = QueryFilter::new().groups(InteractionGroups {
                 memberships: PLAYER_ATTACK_COLLISION_GROUP,
                 filter: ENEMY_COLLISION_GROUP,

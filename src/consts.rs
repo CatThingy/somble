@@ -13,6 +13,7 @@ pub const PLAYER_KICK_HITSTUN_SECS: f32 = 1.0;
 pub const PLAYER_IDLE_ANIM_OFFSET: usize = 0;
 pub const PLAYER_WALK_ANIM_OFFSET: usize = 4;
 pub const PLAYER_WALK_ANIM_FRAMES: usize = 4;
+pub const PLAYER_KICK_ANIM_OFFSET: usize = 20;
 
 pub const CAMERA_PAN_SPEED: f32 = 20.0;
 pub const CAMERA_PAN_RANGE: f32 = 16.0;

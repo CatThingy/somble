@@ -104,7 +104,7 @@ pub struct Plugin;
 
 impl Plugin {
     fn movement(
-        mut q_player: Query<(&mut Velocity, &HitstunTimer, &TextureAtlasSprite), With<Player>>,
+        mut q_player: Query<(&mut Velocity, &HitstunTimer), With<Player>>,
         keys: Res<Input<KeyCode>>,
         mut input_direction: ResMut<InputDirection>,
         mut player_direction: ResMut<PlayerDirection>,
@@ -152,12 +152,12 @@ impl Plugin {
             }
         }
 
-        let (mut player_vel, hitstun, sprite) = match q_player.get_single_mut() {
+        let (mut player_vel, hitstun) = match q_player.get_single_mut() {
             Ok(v) => v,
             Err(_) => return,
         };
 
-        if !hitstun.finished() || sprite.index >= PLAYER_KICK_ANIM_OFFSET {
+        if !hitstun.finished() {
             player_vel.linvel = Vec2::ZERO;
             return;
         }

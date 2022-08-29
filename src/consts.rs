@@ -133,10 +133,10 @@ pub const FIRE_WIND_RADIUS: f32 = 48.0;
 pub const FIRE_WIND_DURATION: f32 = 0.1;
 
 pub const FIRE_LIGHTNING_RADIUS: f32 = 4.0;
-pub const FIRE_LIGHTNING_DURATION: f32 = 0.1;
+pub const FIRE_LIGHTNING_DURATION: f32 = 0.15;
 
 pub const FIRE_EARTH_RADIUS: f32 = 48.0;
-pub const FIRE_EARTH_DAMAGE: f32 = 15.0;
+pub const FIRE_EARTH_DAMAGE: f32 = 10.0;
 pub const FIRE_EARTH_TICK: f32 = 0.25;
 pub const FIRE_EARTH_DURATION: f32 = 5.0;
 

@@ -92,6 +92,21 @@ pub enum Effect {
     Slowed,
 }
 
+#[derive(Component)]
+pub struct OnFireEffect;
+
+#[derive(Component)]
+pub struct ShockedEffect;
+
+#[derive(Component)]
+pub struct DelayedExplosionEffect;
+
+#[derive(Component)]
+pub struct BlindedEffect;
+
+#[derive(Component)]
+pub struct SlowedEffect;
+
 pub struct Plugin;
 
 impl Plugin {
@@ -134,7 +149,7 @@ impl Plugin {
             if on_fire.tick.finished() {
                 event_writer.send(HealthChange {
                     target: entity,
-                    amount: -10.0,
+                    amount: -15.0,
                 });
             }
 
@@ -166,7 +181,7 @@ impl Plugin {
                         ActiveEvents::COLLISION_EVENTS,
                         Sensor,
                         Hitbox,
-                        DamageOnce::new(10.0, Falloff::none()),
+                        DamageOnce::new(5.0, Falloff::none()),
                         DespawnTimer(Timer::from_seconds(0.05, false)),
                     ));
             }
@@ -221,7 +236,7 @@ impl Plugin {
                                 ActiveEvents::COLLISION_EVENTS,
                                 Sensor,
                                 Hitbox,
-                                DamageOnce::new(60.0, Falloff::none()),
+                                DamageOnce::new(160.0, Falloff::none()),
                                 DespawnTimer(Timer::from_seconds(0.05, false)),
                             ));
                     });
@@ -279,6 +294,7 @@ impl Plugin {
                     ..default()
                 })
                 .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .insert(OnFireEffect)
                 .id();
             cmd.entity(new_on_fire).add_child(visual);
         }
@@ -293,6 +309,7 @@ impl Plugin {
                     ..default()
                 })
                 .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .insert(ShockedEffect)
                 .id();
             cmd.entity(new_shocked).add_child(visual);
         }
@@ -307,6 +324,7 @@ impl Plugin {
                     ..default()
                 })
                 .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .insert(DelayedExplosionEffect)
                 .id();
             cmd.entity(new_delayed_explosion).add_child(visual);
         }
@@ -321,6 +339,7 @@ impl Plugin {
                     ..default()
                 })
                 .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .insert(BlindedEffect)
                 .id();
             cmd.entity(new_blinded).add_child(visual);
         }
@@ -335,19 +354,25 @@ impl Plugin {
                     ..default()
                 })
                 .insert(UniformAnim(Timer::from_seconds(0.1, true)))
+                .insert(SlowedEffect)
                 .id();
             cmd.entity(new_slowed).add_child(visual);
         }
     }
 
-    fn remove_visuals<T: Component>(
+    fn remove_visuals<T: Component, V: Component>(
         mut cmd: Commands,
         q_removed: RemovedComponents<T>,
-        q_all: Query<()>,
+        q_parents: Query<((), &Children)>,
+        q_to_remove: Query<Entity, With<V>>,
     ) {
         for entity in q_removed.iter() {
-            if q_all.get(entity).is_ok() {
-                cmd.entity(entity).despawn_descendants();
+            if let Ok((_, children)) = q_parents.get(entity) {
+                for child in children {
+                    if let Ok(child) = q_to_remove.get(*child) {
+                        cmd.entity(child).despawn_recursive();
+                    }
+                }
             }
         }
     }
@@ -363,19 +388,19 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::tick_slowed.run_in_state(GameState::InGame))
             .add_system_to_stage(
                 CoreStage::PostUpdate,
-                Self::remove_visuals::<OnFire>.run_in_state(GameState::InGame),
+                Self::remove_visuals::<OnFire, OnFireEffect>.run_in_state(GameState::InGame),
             )
             .add_system_to_stage(
                 CoreStage::PostUpdate,
-                Self::remove_visuals::<Shocked>.run_in_state(GameState::InGame),
+                Self::remove_visuals::<Shocked, ShockedEffect>.run_in_state(GameState::InGame),
             )
             .add_system_to_stage(
                 CoreStage::PostUpdate,
-                Self::remove_visuals::<Blinded>.run_in_state(GameState::InGame),
+                Self::remove_visuals::<Blinded, BlindedEffect>.run_in_state(GameState::InGame),
             )
             .add_system_to_stage(
                 CoreStage::PostUpdate,
-                Self::remove_visuals::<Slowed>.run_in_state(GameState::InGame),
+                Self::remove_visuals::<Slowed, SlowedEffect>.run_in_state(GameState::InGame),
             )
             .add_system(Self::attach_visuals.run_in_state(GameState::InGame));
     }

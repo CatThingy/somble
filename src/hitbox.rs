@@ -12,6 +12,15 @@ use crate::{
 #[derive(Component)]
 pub struct Hitbox;
 
+#[derive(Component)]
+pub struct Single(Option<()>);
+
+impl Single {
+    pub fn new() -> Self {
+        Single(None)
+    }
+}
+
 #[derive(Debug)]
 pub struct Falloff {
     ratio: f32,
@@ -147,6 +156,7 @@ impl Plugin {
                 Option<&mut DirectedForce>,
                 Option<&mut DamageOnce>,
                 Option<&mut DamagePeriodic>,
+                Option<&mut Single>,
                 Option<&StatusEffect>,
             ),
             (Without<T>, With<Hitbox>),
@@ -189,8 +199,16 @@ impl Plugin {
                         directed_force,
                         damage_once,
                         damage_periodic,
+                        single,
                         status_effect,
                     ) = hitbox_data;
+                    if let Some(mut single) = single {
+                        if single.0.is_none() {
+                            single.0 = Some(());
+                        } else {
+                            continue;
+                        }
+                    }
 
                     if let Some(hitstun) = hitstun {
                         hitstun_timer.set_duration(Duration::from_secs_f32(**hitstun));
@@ -265,7 +283,7 @@ impl Plugin {
                     } else {
                         continue;
                     }
-                    let (_, _, _, _, radial_force, directed_force, _, damage_periodic, _) =
+                    let (_, _, _, _, radial_force, directed_force, _, damage_periodic, _, _) =
                         hitbox_data;
 
                     if let Some(mut radial_force) = radial_force {

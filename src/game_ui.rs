@@ -196,7 +196,7 @@ impl Plugin {
     ) {
         let player_health_pct = match q_player.get_single() {
             Ok(v) => v.percentage(),
-            Err(_) => 0.0,
+            Err(_) => return,
         };
         let mut bar = match q_bar.get_single_mut() {
             Ok(v) => v,

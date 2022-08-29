@@ -7,7 +7,7 @@ use crate::{
     essence::EssenceCounts,
     hitbox::{
         DamageOnce, DamagePeriodic, DirectedForce, Falloff, Hitbox, Hitstun, RadialForce,
-        RadialImpulse, StatusEffect,
+        RadialImpulse, StatusEffect, Single,
     },
     homing::Homing,
     level::NotFromLevel,
@@ -338,7 +338,7 @@ fn fire_wind(
                 atlases.add(TextureAtlas::from_grid(tex, Vec2::splat(96.0), 3, 1))
             },
             UniformAnim(Timer::from_seconds(0.05, true)),
-            DespawnTimer(Timer::from_seconds(0.15, false)),
+            DespawnTimer(Timer::from_seconds(FIRE_WIND_DURATION, false)),
         ))
         .with_children(|parent| {
             parent
@@ -353,7 +353,6 @@ fn fire_wind(
                     Sensor,
                     Hitbox,
                     StatusEffect(Effect::OnFire),
-                    DespawnTimer(Timer::from_seconds(0.5, false)),
                 ));
         });
 }
@@ -385,6 +384,7 @@ fn fire_lightning(
                     ActiveEvents::COLLISION_EVENTS,
                     Sensor,
                     Hitbox,
+                    Single::new(),
                     StatusEffect(Effect::DelayedExplosion),
                     DespawnTimer(Timer::from_seconds(FIRE_LIGHTNING_DURATION, false)),
                 ));

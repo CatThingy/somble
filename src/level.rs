@@ -7,7 +7,6 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::essence::EssenceCounts;
-use crate::game_ui::HealthBar;
 use crate::player::Player;
 use crate::GameState;
 use crate::{consts::*, PauseState};

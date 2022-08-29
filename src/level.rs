@@ -7,6 +7,7 @@ use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::essence::EssenceCounts;
+use crate::game_ui::HealthBar;
 use crate::player::Player;
 use crate::GameState;
 use crate::{consts::*, PauseState};
@@ -92,6 +93,42 @@ impl Default for StairBundle {
     }
 }
 
+#[derive(Bundle, LdtkEntity)]
+pub struct GameEndEntity {
+    #[bundle]
+    #[sprite_sheet_bundle("bed.png", 32.0, 48.0, 2, 1, 0.0, 0.0, 0)]
+    sprite_sheet: SpriteSheetBundle,
+    #[bundle]
+    stairs: GameEndBundle,
+}
+
+#[derive(Component, Default)]
+pub struct GameEnd;
+
+#[derive(Bundle)]
+struct GameEndBundle {
+    collider: Collider,
+    sensor: Sensor,
+    game_end: GameEnd,
+    groups: CollisionGroups,
+    events: ActiveEvents,
+}
+
+impl Default for GameEndBundle {
+    fn default() -> Self {
+        GameEndBundle {
+            collider: Collider::cuboid(16.0, 24.0),
+            sensor: Sensor,
+            game_end: GameEnd,
+            groups: CollisionGroups {
+                memberships: WALL_COLLISION_GROUP,
+                filters: PLAYER_COLLISION_GROUP,
+            },
+            events: ActiveEvents::COLLISION_EVENTS,
+        }
+    }
+}
+
 #[derive(Default, Deref, DerefMut)]
 pub struct WalkableTiles(HashSet<IVec2>);
 
@@ -142,6 +179,40 @@ impl Plugin {
                     } else if let Ok(_) = q_stairs.get(*e2) {
                         if let Ok(_) = q_player.get(*e1) {
                             event_writer.send(ChangeLevel(current_level.0 + 1));
+                            return;
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
+    fn update_game_end(
+        mut cmd: Commands,
+        mut event_reader: EventReader<CollisionEvent>,
+        q_player: Query<Entity, With<Player>>,
+        mut game_end: Query<&mut TextureAtlasSprite, With<GameEnd>>,
+    ) {
+        for event in event_reader.iter() {
+            match event {
+                CollisionEvent::Started(e1, e2, _) => {
+                    if let Ok(mut sprite) = game_end.get_mut(*e1) {
+                        if let Ok(player) = q_player.get(*e2) {
+                            sprite.index = 1;
+                            cmd.entity(player).despawn_recursive();
+                            return;
+                        } else {
+                            continue;
+                        }
+                    } else if let Ok(mut sprite) = game_end.get_mut(*e2) {
+                        if let Ok(player) = q_player.get(*e1) {
+                            sprite.index = 1;
+                            cmd.entity(player).despawn_recursive();
                             return;
                         } else {
                             continue;
@@ -229,6 +300,7 @@ impl bevy::app::Plugin for Plugin {
                     .run_in_state(GameState::InGame)
                     .after("stairs"),
             )
+            .add_system(Self::update_game_end.run_in_state(GameState::InGame))
             .add_system(Self::restart_level.run_in_state(GameState::InGame))
             .add_system(Self::reset.run_in_state(GameState::InGame))
             .insert_resource(LevelSelection::Index(0))
@@ -237,6 +309,7 @@ impl bevy::app::Plugin for Plugin {
             .register_ldtk_int_cell::<WallBundle>(1)
             .register_ldtk_int_cell::<WalkableBundle>(2)
             .register_ldtk_entity::<StairEntity>("Stairs")
+            .register_ldtk_entity::<GameEndEntity>("GameEnd")
             .add_event::<ChangeLevel>()
             .add_event::<RestartLevel>()
             .add_event::<Reset>();

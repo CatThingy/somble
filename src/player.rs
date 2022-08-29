@@ -103,42 +103,42 @@ impl Plugin {
         mut player_direction: ResMut<PlayerDirection>,
     ) {
         // Prevent stopping on SOCD
-        if keys.just_pressed(KeyCode::A) {
+        if keys.just_pressed(KeyCode::A) || keys.just_pressed(KeyCode::Left) {
             input_direction.x = -1.0;
         }
-        if keys.just_pressed(KeyCode::D) {
+        if keys.just_pressed(KeyCode::D) || keys.just_pressed(KeyCode::Right) {
             input_direction.x = 1.0;
         }
-        if keys.just_pressed(KeyCode::W) {
+        if keys.just_pressed(KeyCode::W) || keys.just_pressed(KeyCode::Up) {
             input_direction.y = 1.0;
         }
-        if keys.just_pressed(KeyCode::S) {
+        if keys.just_pressed(KeyCode::S) || keys.just_pressed(KeyCode::Down) {
             input_direction.y = -1.0;
         }
 
-        if keys.just_released(KeyCode::A) {
-            if keys.pressed(KeyCode::D) {
+        if keys.just_released(KeyCode::A) || keys.just_released(KeyCode::Left) {
+            if keys.pressed(KeyCode::D) || keys.pressed(KeyCode::Right) {
                 input_direction.x = 1.0;
             } else {
                 input_direction.x = 0.0;
             }
         }
-        if keys.just_released(KeyCode::D) {
-            if keys.pressed(KeyCode::A) {
+        if keys.just_released(KeyCode::D) || keys.just_released(KeyCode::Right) {
+            if keys.pressed(KeyCode::A) || keys.pressed(KeyCode::Left) {
                 input_direction.x = -1.0;
             } else {
                 input_direction.x = 0.0;
             }
         }
-        if keys.just_released(KeyCode::W) {
-            if keys.pressed(KeyCode::S) {
+        if keys.just_released(KeyCode::W) || keys.just_released(KeyCode::Up) {
+            if keys.pressed(KeyCode::S) || keys.pressed(KeyCode::Down) {
                 input_direction.y = -1.0;
             } else {
                 input_direction.y = 0.0;
             }
         }
-        if keys.just_released(KeyCode::S) {
-            if keys.pressed(KeyCode::W) {
+        if keys.just_released(KeyCode::S) || keys.just_released(KeyCode::Down) {
+            if keys.pressed(KeyCode::W) || keys.pressed(KeyCode::Up) {
                 input_direction.y = 1.0;
             } else {
                 input_direction.y = 0.0;

@@ -572,20 +572,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_jam_2"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy-inspector-egui",
- "bevy_ecs_ldtk",
- "bevy_rapier2d",
- "fastrand",
- "iyes_loopless",
- "ordered-float",
- "pathfinding",
-]
-
-[[package]]
 name = "bevy_log"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3282,6 +3268,20 @@ dependencies = [
  "wayland-client",
  "wayland-cursor",
  "wayland-protocols",
+]
+
+[[package]]
+name = "somble"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy-inspector-egui",
+ "bevy_ecs_ldtk",
+ "bevy_rapier2d",
+ "fastrand",
+ "iyes_loopless",
+ "ordered-float",
+ "pathfinding",
 ]
 
 [[package]]

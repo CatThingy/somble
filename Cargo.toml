@@ -21,3 +21,6 @@ fastrand = "1.8.0"
 iyes_loopless = "0.7.1"
 ordered-float = "3.0.0"
 pathfinding = "3.0.13"
+
+[target.wasm32-unknown-unknown.dependencies]
+bevy_ecs_ldtk = { version = "0.4.0", features = ["atlas"] }

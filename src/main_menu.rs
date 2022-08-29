@@ -21,6 +21,7 @@ impl Plugin {
                 },
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::ColumnReverse,
                 ..default()
             },
             color: Color::NONE.into(),
@@ -28,6 +29,17 @@ impl Plugin {
         })
         .insert(Root)
         .with_children(|root| {
+            root.spawn_bundle(NodeBundle {
+                image: UiImage(assets.load("title.png")),
+                style: Style {
+                    size: Size {
+                        width: Val::Px(768.0),
+                        height: Val::Px(320.0),
+                    },
+                    ..default()
+                },
+                ..default()
+            });
             root.spawn_bundle(ButtonBundle {
                 image: UiImage(assets.load("play_button.png")),
                 style: Style {

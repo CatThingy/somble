@@ -31,6 +31,9 @@ struct Kicked {
     direction: Vec2,
 }
 
+#[derive(Component)]
+struct Extracted;
+
 #[derive(Bundle)]
 pub struct PlayerBundle {
     player: Player,
@@ -56,7 +59,7 @@ impl LdtkEntity for PlayerBundle {
         texture_atlases: &mut Assets<TextureAtlas>,
     ) -> Self {
         let player_texture = asset_server.load("player.png");
-        let player_atlas = TextureAtlas::from_grid(player_texture, Vec2::new(16.0, 32.0), 12, 1);
+        let player_atlas = TextureAtlas::from_grid(player_texture, Vec2::new(20.0, 32.0), 4, 5);
         let texture_atlas = texture_atlases.add(player_atlas);
         PlayerBundle {
             player: Player,
@@ -66,7 +69,6 @@ impl LdtkEntity for PlayerBundle {
             anim_timer: AnimationTimer(Timer::from_seconds(0.25, true)),
             spritesheet: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
-                    custom_size: Some(Vec2::from_array([16.0, 32.0])),
                     anchor: Anchor::Custom(Vec2::from_array([0.0, -0.25])),
                     ..default()
                 },
@@ -174,26 +176,26 @@ impl Plugin {
         if input_direction.is_changed() {
             if **input_direction != Vec2::ZERO {
                 match **player_direction {
-                    IVec2 { x: _, y: 1 } => {
+                    IVec2 { x: _, y: -1 } => {
                         sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 0
                     }
-                    IVec2 { x: 1, y: _ } => {
+                    IVec2 { x: _, y: 1 } => {
                         sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 1
                     }
                     IVec2 { x: -1, y: _ } => {
                         sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 2
                     }
-                    IVec2 { x: _, y: -1 } => {
+                    IVec2 { x: 1, y: _ } => {
                         sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 3
                     }
                     _ => (),
                 }
             } else {
                 match **player_direction {
-                    IVec2 { x: _, y: 1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 0,
-                    IVec2 { x: 1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 1,
+                    IVec2 { x: _, y: -1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 0,
+                    IVec2 { x: _, y: 1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 1,
                     IVec2 { x: -1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 2,
-                    IVec2 { x: _, y: -1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 3,
+                    IVec2 { x: 1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 3,
                     _ => (),
                 }
             }
@@ -203,13 +205,13 @@ impl Plugin {
 
             if timer.just_finished() {
                 match **player_direction {
-                    IVec2 { x: _, y: 1 } => {
+                    IVec2 { x: _, y: -1 } => {
                         sprite.index = PLAYER_WALK_ANIM_OFFSET
                             + PLAYER_WALK_ANIM_FRAMES * 0
                             + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
                                 % PLAYER_WALK_ANIM_FRAMES);
                     }
-                    IVec2 { x: 1, y: _ } => {
+                    IVec2 { x: _, y: 1 } => {
                         sprite.index = PLAYER_WALK_ANIM_OFFSET
                             + PLAYER_WALK_ANIM_FRAMES * 1
                             + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
@@ -221,7 +223,7 @@ impl Plugin {
                             + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
                                 % PLAYER_WALK_ANIM_FRAMES);
                     }
-                    IVec2 { x: _, y: -1 } => {
+                    IVec2 { x: 1, y: _ } => {
                         sprite.index = PLAYER_WALK_ANIM_OFFSET
                             + PLAYER_WALK_ANIM_FRAMES * 3
                             + ((sprite.index - PLAYER_WALK_ANIM_OFFSET + 1)
@@ -244,26 +246,26 @@ impl Plugin {
         };
         if **input_direction != Vec2::ZERO {
             match **player_direction {
-                IVec2 { x: _, y: 1 } => {
+                IVec2 { x: _, y: -1 } => {
                     sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 0
                 }
-                IVec2 { x: 1, y: _ } => {
+                IVec2 { x: _, y: 1 } => {
                     sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 1
                 }
                 IVec2 { x: -1, y: _ } => {
                     sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 2
                 }
-                IVec2 { x: _, y: -1 } => {
+                IVec2 { x: 1, y: _ } => {
                     sprite.index = PLAYER_WALK_ANIM_OFFSET + PLAYER_WALK_ANIM_FRAMES * 3
                 }
                 _ => (),
             }
         } else {
             match **player_direction {
-                IVec2 { x: _, y: 1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 0,
-                IVec2 { x: 1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 1,
+                IVec2 { x: _, y: -1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 0,
+                IVec2 { x: _, y: 1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 1,
                 IVec2 { x: -1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 2,
-                IVec2 { x: _, y: -1 } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 3,
+                IVec2 { x: 1, y: _ } => sprite.index = PLAYER_IDLE_ANIM_OFFSET + 3,
                 _ => (),
             }
         }
@@ -338,19 +340,40 @@ impl Plugin {
     fn handle_kick(
         mut cmd: Commands,
         mut event_reader: EventReader<Kicked>,
-        mut q_enemy: Query<(&Element, &GlobalTransform, &mut HitstunTimer), With<Enemy>>,
+        mut q_enemy: Query<
+            (
+                Entity,
+                &Element,
+                &GlobalTransform,
+                &mut HitstunTimer,
+                Option<&Extracted>,
+            ),
+            With<Enemy>,
+        >,
     ) {
         for event in event_reader.iter() {
-            if let Ok((element, transform, mut hitstun_timer)) = q_enemy.get_mut(event.target) {
+            if let Ok((entity, element, transform, mut hitstun_timer, extracted)) =
+                q_enemy.get_mut(event.target)
+            {
                 cmd.entity(event.target).insert(ExternalImpulse {
                     impulse: event.direction * PLAYER_KICK_FORCE,
                     torque_impulse: 0.0,
                 });
-                cmd.spawn_bundle(SpatialBundle {
-                    transform: transform.compute_transform(),
-                    ..default()
-                })
-                .insert_bundle((*element, Essence, NotFromLevel));
+
+                if extracted.is_none() {
+                    cmd.entity(entity).insert(Extracted);
+                    for _ in 0..fastrand::u8(2..=4) {
+                        let mut transform = transform.compute_transform();
+                        let offset =
+                            Vec2::new((fastrand::f32() - 0.5) * 8.0, (fastrand::f32() - 0.5) * 8.0);
+                        transform.translation += offset.extend(0.0);
+                        cmd.spawn_bundle(SpatialBundle {
+                            transform,
+                            ..default()
+                        })
+                        .insert_bundle((*element, Essence, NotFromLevel));
+                    }
+                }
                 hitstun_timer.set_duration(Duration::from_secs_f32(PLAYER_KICK_HITSTUN_SECS));
                 hitstun_timer.reset();
             }

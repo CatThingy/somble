@@ -110,7 +110,7 @@ impl Plugin {
                     }
                     let (element, essence) = essence_data;
 
-                    if counts[*element] < 3 {
+                    if counts[*element] < 5 {
                         cmd.entity(essence).despawn_recursive();
                         *counts.get_mut(element).unwrap() += 1;
                         event_writer.send(HealthChange {

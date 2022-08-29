@@ -22,6 +22,9 @@ pub struct TimeScale(pub f32);
 pub struct UniformAnim(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
+pub struct UniformAnimOnce(pub Timer);
+
+#[derive(Component, Deref, DerefMut)]
 pub struct DespawnTimer(pub Timer);
 
 #[derive(Component)]
@@ -233,7 +236,7 @@ impl Plugin {
         .extend(0.0);
     }
 
-    fn update_animations(
+    fn update_anim(
         mut q_animated: Query<(
             &mut TextureAtlasSprite,
             &mut UniformAnim,
@@ -256,6 +259,39 @@ impl Plugin {
                     _ => return,
                 };
                 sprite.index = (sprite.index + 1) % atlas.textures.len();
+            }
+        }
+    }
+
+    fn update_anim_once(
+        mut cmd: Commands,
+        mut q_animated: Query<(
+            Entity,
+            &mut TextureAtlasSprite,
+            &mut UniformAnimOnce,
+            &Handle<TextureAtlas>,
+            Option<&TimeIndependent>,
+        )>,
+        atlases: Res<Assets<TextureAtlas>>,
+        time: Res<Time>,
+        time_scale: Res<TimeScale>,
+    ) {
+        for (entity, mut sprite, mut timer, handle, independent) in &mut q_animated {
+            timer.tick(if independent.is_some() {
+                time.delta()
+            } else {
+                time.delta().mul_f32(**time_scale)
+            });
+            if timer.just_finished() {
+                let atlas = match atlases.get(handle) {
+                    Some(v) => v,
+                    _ => return,
+                };
+                if sprite.index == atlas.textures.len() - 1 {
+                    cmd.entity(entity).remove::<UniformAnimOnce>();
+                } else {
+                    sprite.index += 1;
+                }
             }
         }
     }
@@ -317,7 +353,8 @@ impl bevy::app::Plugin for Plugin {
             .add_system(Self::set_focus_on_player_spawn)
             .add_system_to_stage(CoreStage::Last, Self::follow_camera_focus)
             .add_system(Self::update_focus_pos)
-            .add_system(Self::update_animations)
+            .add_system(Self::update_anim)
+            .add_system(Self::update_anim_once)
             .add_system(Self::update_despawn)
             .add_system(Self::propagate_time_scale)
             .add_system(Self::destroy_on_hit)

@@ -15,7 +15,7 @@ use crate::{
     status::Effect,
     utils::{
         DespawnTimer, Digits, ElementIconAtlases, MousePosition, TimeIndependent, TimeScale,
-        UniformAnim,
+        UniformAnim, UniformAnimOnce,
     },
     Element, GameState, PauseState,
 };
@@ -241,7 +241,14 @@ fn lightning_lightning(
                     Sensor,
                     Hitbox,
                     Hitstun(LIGHTNING_LIGHTNING_HITSTUN),
-                    DamageOnce::new(LIGHTNING_LIGHTNING_DAMAGE, Falloff::none()),
+                    DamageOnce::new(
+                        LIGHTNING_LIGHTNING_DAMAGE,
+                        Falloff::new(
+                            LIGHTNING_LIGHTNING_MAX_FALLOFF,
+                            LIGHTNING_LIGHTNING_FALLOFF_START,
+                            LIGHTNING_LIGHTNING_FALLOFF_END,
+                        ),
+                    ),
                     DespawnTimer(Timer::from_seconds(0.1, false)),
                 ));
         });
@@ -550,7 +557,7 @@ fn water_earth(
                             },
                             ..default()
                         })
-                        .insert(UniformAnim(Timer::from_seconds(0.1, true)));
+                        .insert(UniformAnimOnce(Timer::from_seconds(0.1, true)));
                 }
             }
         });
@@ -1078,7 +1085,7 @@ impl Plugin {
                 sprite.index = count;
                 if count == 0 {
                     sprite.color = Color::RED;
-                } else if count == 3 {
+                } else if count == 5 {
                     sprite.color = Color::YELLOW;
                 } else {
                     sprite.color = Color::WHITE;

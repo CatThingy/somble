@@ -13,9 +13,9 @@ pub struct Homing {
 pub struct Plugin;
 
 impl Plugin {
-    fn calc_homing(
-        mut q_homing: Query<(Entity, &GlobalTransform, &mut Velocity, &Homing), Without<Enemy>>,
-        q_targets: Query<&GlobalTransform, (Without<Homing>, With<Enemy>)>,
+    fn calc_homing<T: Component>(
+        mut q_homing: Query<(Entity, &GlobalTransform, &mut Velocity, &Homing), Without<T>>,
+        q_targets: Query<&GlobalTransform, (Without<Homing>, With<T>)>,
         rapier_ctx: Res<RapierContext>,
     ) {
         for (entity, transform, mut velocity, homing) in &mut q_homing {
@@ -45,6 +45,6 @@ impl Plugin {
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::calc_homing.run_in_state(GameState::InGame));
+        app.add_system(Self::calc_homing::<Enemy>.run_in_state(GameState::InGame));
     }
 }

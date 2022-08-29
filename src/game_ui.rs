@@ -194,16 +194,16 @@ impl Plugin {
         q_player: Query<&Health, With<Player>>,
         mut q_bar: Query<&mut Style, With<HealthBar>>,
     ) {
-        let player_health = match q_player.get_single() {
-            Ok(v) => v,
-            Err(_) => return,
+        let player_health_pct = match q_player.get_single() {
+            Ok(v) => v.percentage(),
+            Err(_) => 0.0,
         };
         let mut bar = match q_bar.get_single_mut() {
             Ok(v) => v,
             Err(_) => return,
         };
 
-        bar.size.width = Val::Percent(player_health.percentage() * 100.0);
+        bar.size.width = Val::Percent(player_health_pct * 100.0);
     }
     fn handle_restart_click(
         mut cmd: Commands,
